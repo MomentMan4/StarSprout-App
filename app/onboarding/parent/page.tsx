@@ -151,8 +151,8 @@ export default function ParentOnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="w-full max-w-2xl">
+    <div className="flex min-h-svh max-h-svh w-full items-center justify-center overflow-y-auto p-6 md:p-10 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="w-full max-w-2xl py-6">
         <div className="flex flex-col gap-6">
           <div className="text-center mb-2">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -203,13 +203,13 @@ export default function ParentOnboardingPage() {
               )}
 
               {step === 2 && (
-                <Card>
-                  <CardHeader>
+                <Card className="max-h-[calc(100svh-280px)] flex flex-col">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle>Add Your First Child</CardTitle>
                     <CardDescription>We'll create their StarSprout profile</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6">
+                  <CardContent className="flex-1 overflow-y-auto">
+                    <div className="grid gap-6 pb-2">
                       <div className="grid gap-2">
                         <Label htmlFor="nickname">Child's Nickname</Label>
                         <Input
@@ -240,7 +240,7 @@ export default function ParentOnboardingPage() {
 
                       {error && <p className="text-sm text-red-500">{error}</p>}
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 pt-2">
                         <Button variant="outline" onClick={handleBack} className="w-full bg-transparent">
                           Back
                         </Button>
