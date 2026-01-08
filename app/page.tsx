@@ -5,8 +5,18 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Sparkles, Shield, Heart, Star, Zap, Trophy } from "lucide-react"
+import { useEffect } from "react"
 
 export default function LandingPage() {
+  useEffect(() => {
+    console.log("[v0] Landing page mounted successfully")
+    console.log("[v0] Current pathname:", window.location.pathname)
+    console.log("[v0] Environment:", {
+      clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? "Set" : "Not set",
+      appUrl: process.env.NEXT_PUBLIC_APP_URL || "Not set",
+    })
+  }, [])
+
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Hero Section */}

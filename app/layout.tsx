@@ -45,17 +45,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`font-sans antialiased`}>
-          <MagicBellProvider>
-            {children}
-            <FloatingInbox />
-          </MagicBellProvider>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+  const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+  const content = (
+    <html lang="en">
+      <body className={`font-sans antialiased`}>
+        <MagicBellProvider>
+          {children}
+          <FloatingInbox />
+        </MagicBellProvider>
+        <Analytics />
+      </body>
+    </html>
   )
+
+  if (hasClerkKey) {
+    return <ClerkProvider>{content}</ClerkProvider>
+  }
+
+  return content
 }
