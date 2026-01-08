@@ -4,7 +4,25 @@ import { cookies } from "next/headers"
 export async function createClient() {
   const cookieStore = await cookies()
 
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("[v0] Supabase environment variables not set. Using placeholder values for build.")
+    // Return a client with placeholder values for build-time
+    return createServerClient("https://placeholder.supabase.co", "placeholder-anon-key", {
+      cookies: {
+        getAll() {
+          return []
+        },
+        setAll() {
+          // No-op for build
+        },
+      },
+    })
+  }
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()
