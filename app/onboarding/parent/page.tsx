@@ -15,6 +15,7 @@ import { AvatarPicker } from "@/components/onboarding/avatar-picker"
 import { Sparkles } from "lucide-react"
 import { haptics } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
+import { completeParentOnboarding } from "@/app/actions/onboarding"
 
 const STEPS = ["Household", "First Child", "Consent", "First Quest"]
 const STARTER_QUESTS = [
@@ -108,46 +109,24 @@ export default function ParentOnboardingPage() {
     console.log("[v0] Starting onboarding with user:", effectiveUserId)
 
     try {
-      console.log("[v0] Posting to /api/onboarding/parent")
-      const response = await fetch("/api/onboarding/parent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clerk_user_id: effectiveUserId,
-          household_name: householdName,
-          parent_nickname: effectiveNickname,
-          child_nickname: childNickname,
-          child_avatar: childAvatar,
-          child_age_band: childAgeBand,
-          consent_coppa: consentCoppa,
-          consent_ai: consentAI,
-          consent_social: consentSocial,
-          starter_quest: STARTER_QUESTS[selectedQuest],
-        }),
+      console.log("[v0] Calling server action")
+      const result = await completeParentOnboarding({
+        clerk_user_id: effectiveUserId,
+        household_name: householdName,
+        parent_nickname: effectiveNickname,
+        child_nickname: childNickname,
+        child_avatar: childAvatar,
+        child_age_band: childAgeBand,
+        consent_coppa: consentCoppa,
+        consent_ai: consentAI,
+        consent_social: consentSocial,
+        starter_quest: STARTER_QUESTS[selectedQuest],
       })
 
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response ok:", response.ok)
+      console.log("[v0] Server action result:", result)
 
-      const contentType = response.headers.get("content-type")
-      let data
-
-      if (contentType && contentType.includes("application/json")) {
-        try {
-          data = await response.json()
-          console.log("[v0] Response data:", data)
-        } catch (parseError) {
-          console.error("[v0] Failed to parse JSON response:", parseError)
-          throw new Error("Server returned invalid response")
-        }
-      } else {
-        const text = await response.text()
-        console.error("[v0] Non-JSON response:", text)
-        throw new Error("Server returned non-JSON response")
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to complete onboarding")
+      if (!result.success) {
+        throw new Error(result.error || "Failed to complete onboarding")
       }
 
       haptics.celebration()
