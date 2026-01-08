@@ -1,5 +1,3 @@
-"use client"
-
 import { KidProfileClient } from "@/components/kid/kid-profile-client"
 import { requireChild } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
