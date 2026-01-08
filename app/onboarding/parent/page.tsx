@@ -38,8 +38,8 @@ export default function ParentOnboardingPage() {
   const [childAvatar, setChildAvatar] = useState<string | null>(null)
   const [childAgeBand, setChildAgeBand] = useState<string>("")
   const [consentCoppa, setConsentCoppa] = useState(false)
-  const [consentAI, setConsentAI] = useState(true)
-  const [consentSocial, setConsentSocial] = useState(true)
+  const [consentAI, setConsentAI] = useState(false)
+  const [consentSocial, setConsentSocial] = useState(false)
   const [selectedQuest, setSelectedQuest] = useState(0)
 
   useEffect(() => {
@@ -274,7 +274,7 @@ export default function ParentOnboardingPage() {
                           >
                             I confirm I am a parent or guardian (Required)
                           </Label>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             I have authority to create accounts for my children and consent to their use of StarSprout.
                           </p>
                         </div>
@@ -293,8 +293,9 @@ export default function ParentOnboardingPage() {
                           >
                             Enable AI features (Optional)
                           </Label>
-                          <p className="text-sm text-muted-foreground">
-                            AI-powered motivations and insights. All data is anonymized and never shared.
+                          <p className="text-xs text-muted-foreground">
+                            AI-powered motivations and insights. All data is anonymized and never shared. You can enable
+                            this later in Settings.
                           </p>
                         </div>
                       </div>
@@ -312,10 +313,18 @@ export default function ParentOnboardingPage() {
                           >
                             Enable social features (Optional)
                           </Label>
-                          <p className="text-sm text-muted-foreground">
-                            Friends-only leaderboards. Parent approval required for all connections.
+                          <p className="text-xs text-muted-foreground">
+                            Friends-only leaderboards. Parent approval required for all connections. You can enable this
+                            later in Settings.
                           </p>
                         </div>
+                      </div>
+
+                      <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                        <p className="text-xs text-blue-900">
+                          Don't worry! You can always enable or disable AI and Social features later in your Settings
+                          page. You'll be asked to provide consent when enabling them.
+                        </p>
                       </div>
 
                       {error && <p className="text-sm text-red-500">{error}</p>}

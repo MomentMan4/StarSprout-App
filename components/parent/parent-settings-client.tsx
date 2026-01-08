@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useRouter } from "next/navigation"
 import type { Household, User, NotificationPreference, FeatureFlag } from "@/lib/db/types"
 import { haptic } from "@/lib/haptics"
@@ -45,11 +54,75 @@ export function ParentSettingsClient({
   const [emailEnabled, setEmailEnabled] = useState(notificationPrefs?.email_enabled ?? false)
   const [weeklySummaryEmail, setWeeklySummaryEmail] = useState(notificationPrefs?.weekly_summary_email ?? false)
 
+  const [showAIConsentDialog, setShowAIConsentDialog] = useState(false)
+  const [showSocialConsentDialog, setShowSocialConsentDialog] = useState(false)
+  const [pendingAIToggle, setPendingAIToggle] = useState(false)
+  const [pendingSocialToggle, setPendingSocialToggle] = useState(false)
+  const [aiConsentChecked, setAiConsentChecked] = useState(false)
+  const [socialConsentChecked, setSocialConsentChecked] = useState(false)
+
+  const [socialEnabled, setSocialEnabled] = useState(
+    featureFlags.some((f) => f.flag_key === "social_features" && f.is_enabled),
+  )
+
   const [saving, setSaving] = useState(false)
 
   const handleToggleWithHaptic = (setter: (value: boolean) => void) => (value: boolean) => {
     haptic("TAP")
     setter(value)
+  }
+
+  const handleAIFeatureToggle = (featureName: string, currentValue: boolean, newValue: boolean) => {
+    // If turning ON and currently ALL AI features are OFF, require consent
+    const anyAIEnabled = aiMotivation || aiReflection || aiWeeklySummary
+
+    if (newValue && !anyAIEnabled) {
+      setPendingAIToggle(true)
+      setShowAIConsentDialog(true)
+      setAiConsentChecked(false)
+      return
+    }
+
+    // Otherwise, just toggle normally
+    haptic("TAP")
+    if (featureName === "motivation") setAiMotivation(newValue)
+    if (featureName === "reflection") setAiReflection(newValue)
+    if (featureName === "weekly") setAiWeeklySummary(newValue)
+  }
+
+  const handleSocialToggle = (newValue: boolean) => {
+    // If turning ON, require consent
+    if (newValue && !socialEnabled) {
+      setPendingSocialToggle(true)
+      setShowSocialConsentDialog(true)
+      setSocialConsentChecked(false)
+      return
+    }
+
+    // If turning OFF, just toggle
+    haptic("TAP")
+    setSocialEnabled(newValue)
+  }
+
+  const handleAIConsentConfirm = () => {
+    if (!aiConsentChecked) return
+
+    haptic("SUCCESS")
+    setShowAIConsentDialog(false)
+
+    // Enable the AI feature that was pending
+    // For simplicity, enable all AI features when consent is given
+    setAiMotivation(true)
+    setAiReflection(true)
+    setAiWeeklySummary(true)
+  }
+
+  const handleSocialConsentConfirm = () => {
+    if (!socialConsentChecked) return
+
+    haptic("SUCCESS")
+    setShowSocialConsentDialog(false)
+    setSocialEnabled(true)
   }
 
   const handleSaveAISettings = async () => {
@@ -72,6 +145,29 @@ export function ParentSettingsClient({
       router.refresh()
     } catch (error) {
       console.error("[v0] Error saving AI settings:", error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveSocialSettings = async () => {
+    setSaving(true)
+    try {
+      await fetch("/api/settings/feature-flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          userId,
+          flags: {
+            social_features: socialEnabled,
+          },
+        }),
+      })
+      haptic("SUCCESS")
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Error saving social settings:", error)
     } finally {
       setSaving(false)
     }
@@ -164,7 +260,7 @@ export function ParentSettingsClient({
             <Switch
               id="ai-motivation"
               checked={aiMotivation}
-              onCheckedChange={handleToggleWithHaptic(setAiMotivation)}
+              onCheckedChange={(value) => handleAIFeatureToggle("motivation", aiMotivation, value)}
             />
           </div>
 
@@ -180,7 +276,7 @@ export function ParentSettingsClient({
             <Switch
               id="ai-reflection"
               checked={aiReflection}
-              onCheckedChange={handleToggleWithHaptic(setAiReflection)}
+              onCheckedChange={(value) => handleAIFeatureToggle("reflection", aiReflection, value)}
             />
           </div>
 
@@ -194,12 +290,35 @@ export function ParentSettingsClient({
             <Switch
               id="ai-weekly"
               checked={aiWeeklySummary}
-              onCheckedChange={handleToggleWithHaptic(setAiWeeklySummary)}
+              onCheckedChange={(value) => handleAIFeatureToggle("weekly", aiWeeklySummary, value)}
             />
           </div>
 
           <Button onClick={handleSaveAISettings} disabled={saving} className="w-full">
             {saving ? "Saving..." : "Save AI Settings"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Social Features */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Social Features</CardTitle>
+          <CardDescription>Control friend connections and leaderboards</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="social-enabled">Enable Social Features</Label>
+              <p className="text-sm text-muted-foreground">
+                Friends-only leaderboards with parent-approved connections
+              </p>
+            </div>
+            <Switch id="social-enabled" checked={socialEnabled} onCheckedChange={handleSocialToggle} />
+          </div>
+
+          <Button onClick={handleSaveSocialSettings} disabled={saving} className="w-full">
+            {saving ? "Saving..." : "Save Social Settings"}
           </Button>
         </CardContent>
       </Card>
@@ -312,6 +431,108 @@ export function ParentSettingsClient({
           </Button>
         </CardContent>
       </Card>
+
+      {/* AI Consent Dialog */}
+      <Dialog open={showAIConsentDialog} onOpenChange={setShowAIConsentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enable AI Features?</DialogTitle>
+            <DialogDescription>Please review and accept to enable AI-powered features</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg bg-muted p-4 space-y-2">
+              <h4 className="font-semibold text-sm">What AI Features Do</h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Generate age-appropriate motivational messages</li>
+                <li>Create thoughtful reflection prompts</li>
+                <li>Provide weekly insights for parents</li>
+              </ul>
+            </div>
+            <div className="rounded-lg bg-muted p-4 space-y-2">
+              <h4 className="font-semibold text-sm">Privacy Protection</h4>
+              <p className="text-sm text-muted-foreground">
+                We only send minimal context (nickname, age band, quest category) to generate messages. No personal data
+                is stored or used for training. All data is anonymized and never shared.
+              </p>
+            </div>
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="ai-consent-dialog"
+                checked={aiConsentChecked}
+                onCheckedChange={(checked) => setAiConsentChecked(checked === true)}
+              />
+              <Label htmlFor="ai-consent-dialog" className="text-sm font-medium leading-none cursor-pointer">
+                I understand and consent to enabling AI features
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAIConsentDialog(false)
+                setPendingAIToggle(false)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAIConsentConfirm} disabled={!aiConsentChecked}>
+              Enable AI Features
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Social Consent Dialog */}
+      <Dialog open={showSocialConsentDialog} onOpenChange={setShowSocialConsentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enable Social Features?</DialogTitle>
+            <DialogDescription>Please review and accept to enable friend connections</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg bg-muted p-4 space-y-2">
+              <h4 className="font-semibold text-sm">What Social Features Include</h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Friends-only leaderboards (no public profiles)</li>
+                <li>Weekly ranking with approved friends</li>
+                <li>Invite codes for connection requests</li>
+              </ul>
+            </div>
+            <div className="rounded-lg bg-muted p-4 space-y-2">
+              <h4 className="font-semibold text-sm">Parent Control</h4>
+              <p className="text-sm text-muted-foreground">
+                All friend requests require parent approval from BOTH families. No messaging or direct communication
+                between children. Only points and quest completion counts are visible.
+              </p>
+            </div>
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="social-consent-dialog"
+                checked={socialConsentChecked}
+                onCheckedChange={(checked) => setSocialConsentChecked(checked === true)}
+              />
+              <Label htmlFor="social-consent-dialog" className="text-sm font-medium leading-none cursor-pointer">
+                I understand and consent to enabling social features
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSocialConsentDialog(false)
+                setPendingSocialToggle(false)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSocialConsentConfirm} disabled={!socialConsentChecked}>
+              Enable Social Features
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
