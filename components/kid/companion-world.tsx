@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
+import { Sparkles } from "lucide-react"
 
 interface CompanionWorldProps {
   streak: number
@@ -10,11 +11,11 @@ interface CompanionWorldProps {
 
 export function CompanionWorld({ streak, completionRate }: CompanionWorldProps) {
   const getCompanionStage = () => {
-    if (streak >= 30) return { emoji: "🌳", bg: "from-green-200 to-emerald-300", text: "Mighty Oak!" }
-    if (streak >= 14) return { emoji: "🌲", bg: "from-green-100 to-emerald-200", text: "Growing Tree!" }
-    if (streak >= 7) return { emoji: "🌿", bg: "from-lime-100 to-green-200", text: "Sprout!" }
-    if (streak >= 3) return { emoji: "🌱", bg: "from-yellow-100 to-lime-100", text: "Seedling!" }
-    return { emoji: "🌰", bg: "from-amber-100 to-yellow-100", text: "Seed!" }
+    if (streak >= 30) return { emoji: "🌳", bg: "from-green-200 to-emerald-300", text: "Mighty Oak!", showGlow: true }
+    if (streak >= 14) return { emoji: "🌲", bg: "from-green-100 to-emerald-200", text: "Growing Tree!", showGlow: true }
+    if (streak >= 7) return { emoji: "🌿", bg: "from-lime-100 to-green-200", text: "Sprout!", showGlow: false }
+    if (streak >= 3) return { emoji: "🌱", bg: "from-yellow-100 to-lime-100", text: "Seedling!", showGlow: false }
+    return { emoji: "🌰", bg: "from-amber-100 to-yellow-100", text: "Seed!", showGlow: false }
   }
 
   const stage = getCompanionStage()
@@ -26,28 +27,50 @@ export function CompanionWorld({ streak, completionRate }: CompanionWorldProps) 
       transition={{ delay: 0.4 }}
       className="mb-6"
     >
-      <Card className={`border-2 border-green-300 bg-gradient-to-br ${stage.bg} overflow-hidden`}>
-        <CardContent className="p-6 text-center">
+      <Card className={`border-2 border-green-300 bg-gradient-to-br ${stage.bg} overflow-hidden relative`}>
+        {stage.showGlow && (
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-yellow-200/50 to-green-200/50"
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+          />
+        )}
+
+        <CardContent className="p-6 text-center relative z-10">
           <motion.div
             animate={{
+              y: [0, -8, 0],
               scale: [1, 1.05, 1],
-              rotate: [0, 5, -5, 0],
             }}
             transition={{
-              duration: 2,
+              duration: 3,
               repeat: Number.POSITIVE_INFINITY,
-              repeatDelay: 1,
+              ease: "easeInOut",
             }}
-            className="text-6xl mb-2"
+            className="text-6xl mb-2 relative"
           >
             {stage.emoji}
+            {stage.showGlow && (
+              <motion.div
+                className="absolute -top-2 -right-2"
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+              >
+                <Sparkles className="h-6 w-6 text-yellow-500" />
+              </motion.div>
+            )}
           </motion.div>
+
           <h3 className="text-xl font-black text-green-900 mb-1">{stage.text}</h3>
           <p className="text-sm text-green-700 font-medium">Keep going to grow your StarSprout!</p>
+
           <div className="mt-3 flex items-center justify-center gap-1">
             {[...Array(5)].map((_, i) => (
-              <div
+              <motion.div
                 key={i}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.1, type: "spring" }}
                 className={`w-2 h-2 rounded-full ${
                   i < Math.min(5, Math.floor(streak / 7)) ? "bg-green-600" : "bg-green-300"
                 }`}

@@ -5,7 +5,8 @@ import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
-import { haptic } from "@/lib/utils/haptics"
+import { haptic } from "@/lib/haptics"
+import { sheetEnter, fastTransition } from "@/lib/motion"
 
 interface ReflectionPromptProps {
   quest: any
@@ -37,16 +38,16 @@ export function ReflectionPrompt({ quest, childNickname, ageBand, onComplete, on
 
   const handleEmojiSelect = (emoji: string) => {
     setSelectedEmoji(emoji)
-    haptic("light")
+    haptic("TAP")
   }
 
   const handleReflectionSelect = (reflection: string) => {
     setSelectedReflection(reflection)
-    haptic("light")
+    haptic("TAP")
   }
 
   const handleSubmit = () => {
-    haptic("success")
+    haptic("SUCCESS")
     onComplete()
   }
 
@@ -55,13 +56,16 @@ export function ReflectionPrompt({ quest, childNickname, ageBand, onComplete, on
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={fastTransition}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onSkip}
     >
       <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
+        variants={sheetEnter}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={{ duration: 0.3 }}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md"
       >
@@ -82,7 +86,9 @@ export function ReflectionPrompt({ quest, childNickname, ageBand, onComplete, on
                 {EMOJI_REACTIONS.map((reaction) => (
                   <motion.button
                     key={reaction.emoji}
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={{ scale: 0.85 }}
+                    whileHover={{ scale: 1.1 }}
+                    transition={fastTransition}
                     onClick={() => handleEmojiSelect(reaction.emoji)}
                     className={`w-14 h-14 rounded-full text-3xl transition-all ${
                       selectedEmoji === reaction.emoji

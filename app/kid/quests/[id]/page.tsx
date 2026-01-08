@@ -5,19 +5,27 @@ import { QuestDetailClient } from "@/components/kid/quest-detail-client"
 
 export default async function QuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const user = await requireChild()
-  const supabase = await createClient()
 
-  const { data: task } = await supabase
-    .from("starsprout_tasks")
-    .select("*")
-    .eq("id", id)
-    .eq("assigned_to", user.id)
-    .single()
+  try {
+    const user = await requireChild()
+    const supabase = await createClient()
 
-  if (!task) {
+    const { data: task, error } = await supabase
+      .from("starsprout_tasks")
+      .select("*")
+      .eq("id", id)
+      .eq("assigned_to", user.id)
+      .eq("household_id", user.householdId)
+      .single()
+
+    if (error || !task) {
+      console.error("[v0] Error fetching quest:", error)
+      notFound()
+    }
+
+    return <QuestDetailClient task={task} />
+  } catch (error) {
+    console.error("[v0] Quest detail page error:", error)
     notFound()
   }
-
-  return <QuestDetailClient task={task} />
 }

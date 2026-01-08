@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Users, CheckCircle2, XCircle, Clock } from "lucide-react"
 import { approveFriendRequestAction, denyFriendRequestAction } from "@/app/actions/social-actions"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import { haptic } from "@/lib/haptics"
+import { fadeIn, cardPress, ctaSuccessPulse } from "@/lib/motion"
 
 interface ParentSocialClientProps {
   user: any
@@ -21,16 +23,14 @@ export function ParentSocialClient({ user, pendingRequests, approvedFriendships 
   const handleApprove = async (friendshipId: string) => {
     setProcessing(friendshipId)
     await approveFriendRequestAction(friendshipId, user.id)
+    haptic("SUCCESS")
     setProcessing(null)
-    // Haptic feedback
-    if ("vibrate" in navigator) {
-      navigator.vibrate([50, 30, 50])
-    }
   }
 
   const handleDeny = async (friendshipId: string) => {
     setProcessing(friendshipId)
     await denyFriendRequestAction(friendshipId)
+    haptic("TAP")
     setProcessing(null)
   }
 
@@ -85,61 +85,70 @@ export function ParentSocialClient({ user, pendingRequests, approvedFriendships 
           </CardHeader>
           <CardContent>
             {pendingRequests.length > 0 ? (
-              <div className="space-y-4">
-                {pendingRequests.map((request: any) => (
-                  <motion.div
-                    key={request.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-amber-50 border-amber-200"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-xl font-bold">
-                          {request.child?.nickname.charAt(0).toUpperCase()}
+              <AnimatePresence mode="popLayout">
+                <div className="space-y-4">
+                  {pendingRequests.map((request: any) => (
+                    <motion.div
+                      key={request.id}
+                      variants={fadeIn}
+                      initial="hidden"
+                      animate="visible"
+                      exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                      layout
+                      className="flex items-center justify-between p-4 rounded-lg border bg-amber-50 border-amber-200"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-xl font-bold">
+                            {request.child?.nickname.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold">{request.child?.nickname}</p>
+                            <p className="text-sm text-muted-foreground">Your child</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold">{request.child?.nickname}</p>
-                          <p className="text-sm text-muted-foreground">Your child</p>
+
+                        <span className="text-2xl">➔</span>
+
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-400 rounded-full flex items-center justify-center text-xl font-bold">
+                            {request.friend?.nickname.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold">{request.friend?.nickname}</p>
+                            <p className="text-sm text-muted-foreground">Wants to be friends</p>
+                          </div>
                         </div>
                       </div>
 
-                      <span className="text-2xl">➔</span>
-
                       <div className="flex items-center gap-2">
-                        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-400 rounded-full flex items-center justify-center text-xl font-bold">
-                          {request.friend?.nickname.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold">{request.friend?.nickname}</p>
-                          <p className="text-sm text-muted-foreground">Wants to be friends</p>
-                        </div>
+                        <motion.div whileTap={cardPress} whileHover={ctaSuccessPulse}>
+                          <Button
+                            onClick={() => handleApprove(request.id)}
+                            disabled={processing === request.id}
+                            variant="default"
+                            size="sm"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                        </motion.div>
+                        <motion.div whileTap={cardPress}>
+                          <Button
+                            onClick={() => handleDeny(request.id)}
+                            disabled={processing === request.id}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Deny
+                          </Button>
+                        </motion.div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => handleApprove(request.id)}
-                        disabled={processing === request.id}
-                        variant="default"
-                        size="sm"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        onClick={() => handleDeny(request.id)}
-                        disabled={processing === request.id}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Deny
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </AnimatePresence>
             ) : (
               <div className="text-center py-12">
                 <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />

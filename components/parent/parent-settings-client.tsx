@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
 import type { Household, User, NotificationPreference, FeatureFlag } from "@/lib/db/types"
+import { haptic } from "@/lib/haptics"
 
 interface ParentSettingsClientProps {
   household: Household | null
@@ -46,6 +47,11 @@ export function ParentSettingsClient({
 
   const [saving, setSaving] = useState(false)
 
+  const handleToggleWithHaptic = (setter: (value: boolean) => void) => (value: boolean) => {
+    haptic("TAP")
+    setter(value)
+  }
+
   const handleSaveAISettings = async () => {
     setSaving(true)
     try {
@@ -62,6 +68,7 @@ export function ParentSettingsClient({
           },
         }),
       })
+      haptic("SUCCESS")
       router.refresh()
     } catch (error) {
       console.error("[v0] Error saving AI settings:", error)
@@ -83,6 +90,7 @@ export function ParentSettingsClient({
           weekly_summary_email: weeklySummaryEmail,
         }),
       })
+      haptic("SUCCESS")
       router.refresh()
     } catch (error) {
       console.error("[v0] Error saving notification settings:", error)
@@ -153,7 +161,11 @@ export function ParentSettingsClient({
               <Label htmlFor="ai-motivation">Motivational Messages</Label>
               <p className="text-sm text-muted-foreground">AI-generated encouragement after quest completions</p>
             </div>
-            <Switch id="ai-motivation" checked={aiMotivation} onCheckedChange={setAiMotivation} />
+            <Switch
+              id="ai-motivation"
+              checked={aiMotivation}
+              onCheckedChange={handleToggleWithHaptic(setAiMotivation)}
+            />
           </div>
 
           <Separator />
@@ -165,7 +177,11 @@ export function ParentSettingsClient({
                 AI-generated questions to help kids think about their quests
               </p>
             </div>
-            <Switch id="ai-reflection" checked={aiReflection} onCheckedChange={setAiReflection} />
+            <Switch
+              id="ai-reflection"
+              checked={aiReflection}
+              onCheckedChange={handleToggleWithHaptic(setAiReflection)}
+            />
           </div>
 
           <Separator />
@@ -175,7 +191,11 @@ export function ParentSettingsClient({
               <Label htmlFor="ai-weekly">Weekly AI Summary</Label>
               <p className="text-sm text-muted-foreground">AI-generated insights and suggestions for parents</p>
             </div>
-            <Switch id="ai-weekly" checked={aiWeeklySummary} onCheckedChange={setAiWeeklySummary} />
+            <Switch
+              id="ai-weekly"
+              checked={aiWeeklySummary}
+              onCheckedChange={handleToggleWithHaptic(setAiWeeklySummary)}
+            />
           </div>
 
           <Button onClick={handleSaveAISettings} disabled={saving} className="w-full">
@@ -196,7 +216,7 @@ export function ParentSettingsClient({
               <Label htmlFor="in-app">In-App Notifications</Label>
               <p className="text-sm text-muted-foreground">Receive notifications within StarSprout</p>
             </div>
-            <Switch id="in-app" checked={inAppEnabled} onCheckedChange={setInAppEnabled} />
+            <Switch id="in-app" checked={inAppEnabled} onCheckedChange={handleToggleWithHaptic(setInAppEnabled)} />
           </div>
 
           <Separator />
@@ -206,7 +226,7 @@ export function ParentSettingsClient({
               <Label htmlFor="email">Email Notifications</Label>
               <p className="text-sm text-muted-foreground">Receive important updates via email</p>
             </div>
-            <Switch id="email" checked={emailEnabled} onCheckedChange={setEmailEnabled} />
+            <Switch id="email" checked={emailEnabled} onCheckedChange={handleToggleWithHaptic(setEmailEnabled)} />
           </div>
 
           <Separator />
@@ -219,7 +239,7 @@ export function ParentSettingsClient({
             <Switch
               id="weekly-email"
               checked={weeklySummaryEmail}
-              onCheckedChange={setWeeklySummaryEmail}
+              onCheckedChange={handleToggleWithHaptic(setWeeklySummaryEmail)}
               disabled={!emailEnabled}
             />
           </div>

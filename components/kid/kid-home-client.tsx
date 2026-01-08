@@ -9,7 +9,8 @@ import { QuestCard } from "./quest-card"
 import { ReflectionPrompt } from "./reflection-prompt"
 import { AICoachMessage } from "./ai-coach-message"
 import { CompanionWorld } from "./companion-world"
-import { haptic } from "@/lib/utils/haptics"
+import { haptic } from "@/lib/haptics"
+import { staggerIn, staggerContainer } from "@/lib/motion"
 import Link from "next/link"
 
 type Quest = any // TODO: Import proper type
@@ -44,14 +45,14 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
     setCurrentQuestForReflection(quest)
     setShowReflection(true)
     setJustCompletedQuest(true)
-    haptic("light")
+    haptic("TAP")
   }
 
   const handleReflectionComplete = async () => {
     setShowReflection(false)
     setJustCompletedQuest(false)
+    haptic("SUCCESS")
 
-    // Show AI motivation message after reflection
     const message = await fetch("/api/ai/motivation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,7 +65,6 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
 
     setCoachMessage(message.text)
     setShowCoachMessage(true)
-    haptic("medium")
 
     setTimeout(() => {
       setShowCoachMessage(false)
@@ -102,12 +102,13 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
       </header>
 
       <main className="container mx-auto flex-1 p-4 pb-24 max-w-4xl">
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-3 gap-3 mb-6"
+        >
+          <motion.div variants={staggerIn}>
             <Card className="bg-gradient-to-br from-yellow-100 to-yellow-200 border-2 border-yellow-300">
               <CardContent className="pt-4 pb-4 text-center">
                 <Star className="h-8 w-8 text-yellow-600 mx-auto mb-1" />
@@ -117,11 +118,7 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
+          <motion.div variants={staggerIn}>
             <Card className="bg-gradient-to-br from-orange-100 to-orange-200 border-2 border-orange-300">
               <CardContent className="pt-4 pb-4 text-center">
                 <Flame className="h-8 w-8 text-orange-600 mx-auto mb-1" />
@@ -131,11 +128,7 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
+          <motion.div variants={staggerIn}>
             <Card className="bg-gradient-to-br from-purple-100 to-purple-200 border-2 border-purple-300">
               <CardContent className="pt-4 pb-4 text-center">
                 <Trophy className="h-8 w-8 text-purple-600 mx-auto mb-1" />
@@ -144,9 +137,11 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
               </CardContent>
             </Card>
           </motion.div>
-        </div>
+        </motion.div>
 
-        <CompanionWorld streak={currentStreak} completionRate={progressPercent} />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <CompanionWorld streak={currentStreak} completionRate={progressPercent} />
+        </motion.div>
 
         <AnimatePresence>
           {showCoachMessage && <AICoachMessage message={coachMessage} onDismiss={() => setShowCoachMessage(false)} />}
@@ -223,9 +218,10 @@ export function KidHomeClient({ user, todayQuests, stats, points, streak, badges
             {pendingQuests.map((quest, index) => (
               <motion.div
                 key={quest.id}
-                initial={{ x: -50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 50, opacity: 0 }}
+                variants={staggerIn}
+                initial="hidden"
+                animate="visible"
+                exit={{ opacity: 0, x: 50, transition: { duration: 0.2 } }}
                 transition={{ delay: index * 0.1 }}
               >
                 <QuestCard quest={quest} onSubmit={handleQuestSubmitted} />

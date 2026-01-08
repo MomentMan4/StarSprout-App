@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Clock } from "lucide-react"
 import { CreateRewardSheet } from "./create-reward-sheet"
 import { ApproveRedemptionDialog } from "./approve-redemption-dialog"
-import { haptic } from "@/lib/utils/haptics"
+import { haptic } from "@/lib/haptics"
 import Link from "next/link"
+import { motion, AnimatePresence } from "framer-motion"
+import { fadeIn, cardPress } from "@/lib/motion"
 
 interface ParentRewardsClientProps {
   user: any
@@ -24,7 +26,7 @@ export function ParentRewardsClient({ user, rewards, pendingRedemptions, history
 
   const handleApproveClick = (redemption: any) => {
     setRedemptionToApprove(redemption)
-    haptic("light")
+    haptic("TAP")
   }
 
   return (
@@ -84,28 +86,38 @@ export function ParentRewardsClient({ user, rewards, pendingRedemptions, history
                 </CardHeader>
                 <CardContent>
                   {pendingRedemptions.length > 0 ? (
-                    <div className="space-y-3">
-                      {pendingRedemptions.map((redemption: any) => (
-                        <div
-                          key={redemption.id}
-                          className="flex items-center gap-4 p-4 rounded-lg border-2 border-orange-200 bg-orange-50"
-                        >
-                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-2xl">
-                            {redemption.child?.avatar_url || "👤"}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-lg">
-                              {redemption.reward?.icon_emoji} {redemption.reward?.title}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {redemption.child?.nickname} • {redemption.points_spent} points •{" "}
-                              <Clock className="inline h-3 w-3" /> {new Date(redemption.requested_at).toLocaleString()}
-                            </p>
-                          </div>
-                          <Button onClick={() => handleApproveClick(redemption)}>Review</Button>
-                        </div>
-                      ))}
-                    </div>
+                    <AnimatePresence mode="popLayout">
+                      <div className="space-y-3">
+                        {pendingRedemptions.map((redemption: any) => (
+                          <motion.div
+                            key={redemption.id}
+                            variants={fadeIn}
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, x: -20 }}
+                            layout
+                            className="flex items-center gap-4 p-4 rounded-lg border-2 border-orange-200 bg-orange-50"
+                          >
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-2xl">
+                              {redemption.child?.avatar_url || "👤"}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-lg">
+                                {redemption.reward?.icon_emoji} {redemption.reward?.title}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {redemption.child?.nickname} • {redemption.points_spent} points •{" "}
+                                <Clock className="inline h-3 w-3" />{" "}
+                                {new Date(redemption.requested_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <motion.div whileTap={cardPress}>
+                              <Button onClick={() => handleApproveClick(redemption)}>Review</Button>
+                            </motion.div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </AnimatePresence>
                   ) : (
                     <div className="text-center py-12">
                       <p className="text-lg text-muted-foreground">No pending requests</p>

@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateWeeklyBrief, checkRateLimit } from "@/lib/ai"
+import { generateWeeklyBrief } from "@/lib/ai"
 import { isAIWeeklySummaryEnabled } from "@/lib/db/repositories/settings"
 import { auth } from "@clerk/nextjs/server"
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +11,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Rate limiting: 5 requests per hour for expensive AI calls
-    if (!checkRateLimit(userId, 5, 3600000)) {
-      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+    const rateLimitResult = await rateLimit(`ai_weekly_brief:${userId}`, RATE_LIMITS.AI_WEEKLY_BRIEF)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        },
+      )
     }
 
     const { householdId, householdName, childrenNames, questsCompleted, categoriesData, streakData } =

@@ -9,6 +9,8 @@ import Link from "next/link"
 import { Users, Trophy, TrendingUp, Copy, Check } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { requestFriendAction } from "@/app/actions/social-actions"
+import { haptic } from "@/lib/haptics"
+import { cardPress, staggerIn } from "@/lib/motion"
 
 interface KidFriendsClientProps {
   user: any
@@ -34,12 +36,10 @@ export function KidFriendsClient({ user, friends, leaderboard, inviteCode }: Kid
     if (result.success) {
       setMessage("Friend request sent! Waiting for parent approval.")
       setFriendCode("")
-      // Haptic feedback
-      if ("vibrate" in navigator) {
-        navigator.vibrate(50)
-      }
+      haptic("success")
     } else {
       setMessage(result.error || "Could not send friend request. Check the code and try again.")
+      // No haptic on error
     }
 
     setIsSubmitting(false)
@@ -49,9 +49,7 @@ export function KidFriendsClient({ user, friends, leaderboard, inviteCode }: Kid
     if (inviteCode) {
       navigator.clipboard.writeText(inviteCode)
       setCopied(true)
-      if ("vibrate" in navigator) {
-        navigator.vibrate(30)
-      }
+      haptic("tap")
       setTimeout(() => setCopied(false), 2000)
     }
   }
@@ -109,9 +107,11 @@ export function KidFriendsClient({ user, friends, leaderboard, inviteCode }: Kid
                 className="text-lg font-mono"
                 maxLength={8}
               />
-              <Button onClick={handleRequestFriend} disabled={isSubmitting || !friendCode.trim()} size="lg">
-                Add Friend
-              </Button>
+              <motion.div variants={cardPress} whileTap="pressed">
+                <Button onClick={handleRequestFriend} disabled={isSubmitting || !friendCode.trim()} size="lg">
+                  Add Friend
+                </Button>
+              </motion.div>
             </div>
             <AnimatePresence>
               {message && (
@@ -145,9 +145,10 @@ export function KidFriendsClient({ user, friends, leaderboard, inviteCode }: Kid
                   return (
                     <motion.div
                       key={entry.user_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      variants={staggerIn}
+                      initial="initial"
+                      animate="animate"
+                      custom={index}
                       className={`flex items-center gap-4 p-4 rounded-lg border-2 ${
                         isCurrentUser
                           ? "bg-gradient-to-r from-indigo-100 to-purple-100 border-indigo-300"

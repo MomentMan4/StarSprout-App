@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Star, Sparkles, Clock } from "lucide-react"
 import { requestReward } from "@/app/actions/reward-actions"
-import { haptic } from "@/lib/utils/haptics"
+import { haptic } from "@/lib/haptics"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { cardPress, staggerIn } from "@/lib/motion"
 
 interface KidRewardsClientProps {
   user: any
@@ -24,7 +25,7 @@ export function KidRewardsClient({ user, availablePoints, rewards, redemptions }
 
   const handleRequest = async (rewardId: string, pointsCost: number) => {
     setRequestingId(rewardId)
-    haptic("medium")
+    haptic("tap")
 
     const result = await requestReward(rewardId, pointsCost)
 
@@ -32,7 +33,7 @@ export function KidRewardsClient({ user, availablePoints, rewards, redemptions }
       haptic("success")
       router.refresh()
     } else {
-      haptic("error")
+      // No haptic on error
     }
 
     setRequestingId(null)
@@ -75,12 +76,7 @@ export function KidRewardsClient({ user, availablePoints, rewards, redemptions }
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               {affordableRewards.map((reward, index) => (
-                <motion.div
-                  key={reward.id}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                >
+                <motion.div key={reward.id} variants={staggerIn} initial="initial" animate="animate" custom={index}>
                   <Card className="border-2 border-green-300 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-lg transition-all">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-4 mb-4">
@@ -96,14 +92,16 @@ export function KidRewardsClient({ user, availablePoints, rewards, redemptions }
                           </Badge>
                         </div>
                       </div>
-                      <Button
-                        onClick={() => handleRequest(reward.id, reward.points_cost)}
-                        disabled={requestingId === reward.id}
-                        size="lg"
-                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold"
-                      >
-                        {requestingId === reward.id ? "Requesting..." : "Request This! 🎉"}
-                      </Button>
+                      <motion.div variants={cardPress} whileTap="pressed">
+                        <Button
+                          onClick={() => handleRequest(reward.id, reward.points_cost)}
+                          disabled={requestingId === reward.id}
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-bold"
+                        >
+                          {requestingId === reward.id ? "Requesting..." : "Request This! 🎉"}
+                        </Button>
+                      </motion.div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -121,9 +119,10 @@ export function KidRewardsClient({ user, availablePoints, rewards, redemptions }
               {aspirationalRewards.map((reward, index) => (
                 <motion.div
                   key={reward.id}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: (affordableRewards.length + index) * 0.1 }}
+                  variants={staggerIn}
+                  initial="initial"
+                  animate="animate"
+                  custom={affordableRewards.length + index}
                 >
                   <Card className="border-2 border-gray-300 bg-gradient-to-br from-gray-50 to-gray-100 opacity-80">
                     <CardContent className="p-5">

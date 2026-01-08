@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Stepper } from "@/components/onboarding/stepper"
 import { AvatarPicker } from "@/components/onboarding/avatar-picker"
 import { Sparkles } from "lucide-react"
+import { haptics } from "@/lib/haptics"
+import { cn } from "@/lib/utils"
 
 const STEPS = ["Household", "First Child", "Consent", "First Quest"]
 const STARTER_QUESTS = [
@@ -86,10 +88,7 @@ export default function ParentOnboardingPage() {
       return
     }
 
-    // Haptic feedback
-    if ("vibrate" in navigator) {
-      navigator.vibrate(10)
-    }
+    haptics.success()
 
     setStep(step + 1)
   }
@@ -133,10 +132,7 @@ export default function ParentOnboardingPage() {
         throw new Error(data.error || "Failed to complete onboarding")
       }
 
-      // Haptic success feedback
-      if ("vibrate" in navigator) {
-        navigator.vibrate([50, 50, 50])
-      }
+      haptics.celebration()
 
       router.push("/parent/dashboard")
     } catch (err: any) {
@@ -174,7 +170,10 @@ export default function ParentOnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              transition={{
+                duration: 0.3,
+                ease: "easeInOut",
+              }}
             >
               {step === 1 && (
                 <Card>
@@ -387,8 +386,4 @@ export default function ParentOnboardingPage() {
       </div>
     </div>
   )
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ")
 }

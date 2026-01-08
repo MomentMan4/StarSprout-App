@@ -7,6 +7,9 @@ import Link from "next/link"
 import { Calendar, CheckCircle2, Users, TrendingUp, Sparkles, Gift, Copy } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
+import { motion } from "framer-motion"
+import { haptic } from "@/lib/haptics"
+import { fadeIn, staggerIn } from "@/lib/motion"
 
 interface ParentDashboardClientProps {
   user: any
@@ -46,9 +49,7 @@ export function ParentDashboardClient({
   const copyPraiseLine = (line: string) => {
     navigator.clipboard.writeText(line)
     setCopiedPraise(true)
-    if ("vibrate" in navigator) {
-      navigator.vibrate(30)
-    }
+    haptic("SUCCESS")
     setTimeout(() => setCopiedPraise(false), 2000)
   }
 
@@ -95,53 +96,71 @@ export function ParentDashboardClient({
 
           <TabsContent value="this-week" className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Children</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.total_children}</div>
-                  <p className="text-xs text-muted-foreground">Active members</p>
-                </CardContent>
-              </Card>
+            <motion.div
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+              variants={staggerIn}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div variants={fadeIn}>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Children</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.total_children}</div>
+                    <p className="text-xs text-muted-foreground">Active members</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.pending_approvals}</div>
-                  <p className="text-xs text-muted-foreground">Awaiting review</p>
-                </CardContent>
-              </Card>
+              <motion.div variants={fadeIn}>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.pending_approvals}</div>
+                    <p className="text-xs text-muted-foreground">Awaiting review</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Quests Completed</CardTitle>
-                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.weekly_completions}</div>
-                  <p className="text-xs text-muted-foreground">This week</p>
-                </CardContent>
-              </Card>
+              <motion.div variants={fadeIn}>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Quests Completed</CardTitle>
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.weekly_completions}</div>
+                    <p className="text-xs text-muted-foreground">This week</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Streaks</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.active_streaks}</div>
-                  <p className="text-xs text-muted-foreground">Currently active</p>
-                </CardContent>
-              </Card>
-            </div>
+              <motion.div variants={fadeIn}>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Streaks</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.active_streaks}</div>
+                    <p className="text-xs text-muted-foreground">Currently active</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <motion.div
+              className="grid gap-6 md:grid-cols-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               {/* Quests by Day */}
               <Card>
                 <CardHeader>
@@ -192,122 +211,130 @@ export function ParentDashboardClient({
                   )}
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
 
-            {/* Children Progress */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Children Overview</CardTitle>
-                <CardDescription>Individual progress and stats</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {children.map((child: any) => (
-                    <div key={child.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-2xl font-bold">
-                          {child.nickname.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-lg">{child.nickname}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {child.age_band ? child.age_band.replace("_", " ") : "Age not set"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-6 text-center">
-                        <div>
-                          <p className="text-2xl font-bold text-indigo-600">
-                            {child.points?.[0]?.available_points || 0}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Points</p>
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold text-orange-600">{child.streak?.[0]?.current_streak || 0}</p>
-                          <p className="text-xs text-muted-foreground">Streak</p>
-                        </div>
-                        <div>
-                          <p className="text-2xl font-bold text-yellow-600">{child.points?.[0]?.weekly_points || 0}</p>
-                          <p className="text-xs text-muted-foreground">This Week</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Weekly Brief */}
-            {weeklySummary && (
-              <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>
+              {/* Children Progress */}
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-purple-500" />
-                    Weekly Insights
-                  </CardTitle>
-                  <CardDescription>AI-generated summary and suggestions</CardDescription>
+                  <CardTitle>Children Overview</CardTitle>
+                  <CardDescription>Individual progress and stats</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h4 className="font-semibold mb-2">Summary</h4>
-                    <p className="text-sm leading-relaxed">{weeklySummary.ai_summary || "No summary available"}</p>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        Strengths
-                      </h4>
-                      <ul className="space-y-2">
-                        {weeklySummary.strengths?.map((strength: string, i: number) => (
-                          <li key={i} className="text-sm flex items-start gap-2">
-                            <span className="text-green-500">✓</span>
-                            <span>{strength}</span>
-                          </li>
-                        )) || <li className="text-sm text-muted-foreground">No strengths noted</li>}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-500" />
-                        Opportunities
-                      </h4>
-                      <ul className="space-y-2">
-                        {weeklySummary.opportunities?.map((opp: string, i: number) => (
-                          <li key={i} className="text-sm flex items-start gap-2">
-                            <span className="text-blue-500">→</span>
-                            <span>{opp}</span>
-                          </li>
-                        )) || <li className="text-sm text-muted-foreground">No opportunities noted</li>}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Gift className="h-4 w-4 text-purple-500" />
-                      Suggested Praise Lines
-                    </h4>
-                    <div className="space-y-2">
-                      {weeklySummary.praise_lines?.map((line: string, i: number) => (
-                        <div key={i} className="flex items-center gap-2 p-2 rounded bg-white/60 border">
-                          <p className="flex-1 text-sm italic">"{line}"</p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyPraiseLine(line)}
-                            className="flex-shrink-0"
-                          >
-                            {copiedPraise ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </Button>
+                <CardContent>
+                  <div className="space-y-4">
+                    {children.map((child: any) => (
+                      <div key={child.id} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-2xl font-bold">
+                            {child.nickname.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg">{child.nickname}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {child.age_band ? child.age_band.replace("_", " ") : "Age not set"}
+                            </p>
+                          </div>
                         </div>
-                      )) || <p className="text-sm text-muted-foreground">No praise lines suggested</p>}
-                    </div>
+                        <div className="grid grid-cols-3 gap-6 text-center">
+                          <div>
+                            <p className="text-2xl font-bold text-indigo-600">
+                              {child.points?.[0]?.available_points || 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Points</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-orange-600">
+                              {child.streak?.[0]?.current_streak || 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Streak</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-yellow-600">
+                              {child.points?.[0]?.weekly_points || 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">This Week</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+
+            {weeklySummary && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }}>
+                {/* AI Weekly Brief */}
+                <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      Weekly Insights
+                    </CardTitle>
+                    <CardDescription>AI-generated summary and suggestions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h4 className="font-semibold mb-2">Summary</h4>
+                      <p className="text-sm leading-relaxed">{weeklySummary.ai_summary || "No summary available"}</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Strengths
+                        </h4>
+                        <ul className="space-y-2">
+                          {weeklySummary.strengths?.map((strength: string, i: number) => (
+                            <li key={i} className="text-sm flex items-start gap-2">
+                              <span className="text-green-500">✓</span>
+                              <span>{strength}</span>
+                            </li>
+                          )) || <li className="text-sm text-muted-foreground">No strengths noted</li>}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-blue-500" />
+                          Opportunities
+                        </h4>
+                        <ul className="space-y-2">
+                          {weeklySummary.opportunities?.map((opp: string, i: number) => (
+                            <li key={i} className="text-sm flex items-start gap-2">
+                              <span className="text-blue-500">→</span>
+                              <span>{opp}</span>
+                            </li>
+                          )) || <li className="text-sm text-muted-foreground">No opportunities noted</li>}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-purple-500" />
+                        Suggested Praise Lines
+                      </h4>
+                      <div className="space-y-2">
+                        {weeklySummary.praise_lines?.map((line: string, i: number) => (
+                          <div key={i} className="flex items-center gap-2 p-2 rounded bg-white/60 border">
+                            <p className="flex-1 text-sm italic">"{line}"</p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyPraiseLine(line)}
+                              className="flex-shrink-0"
+                            >
+                              {copiedPraise ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        )) || <p className="text-sm text-muted-foreground">No praise lines suggested</p>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
           </TabsContent>
 

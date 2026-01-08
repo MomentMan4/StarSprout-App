@@ -5,12 +5,18 @@ import { requestFriendship, approveFriendship } from "@/lib/db/repositories/soci
 import { notifyFriendRequestPending, notifyFriendRequestApproved } from "@/lib/notify"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
 export async function requestFriendAction(childId: string, friendCode: string) {
   const user = await requireChild()
 
   if (user.id !== childId) {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const rateLimitResult = await rateLimit(`friend_request:${childId}`, RATE_LIMITS.FRIEND_REQUEST)
+  if (!rateLimitResult.success) {
+    return { success: false, error: "Too many friend requests. Please try again later." }
   }
 
   const friendship = await requestFriendship({

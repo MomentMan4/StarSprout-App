@@ -1,30 +1,49 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { requireChild } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Star, Trophy, Flame, TrendingUp } from "lucide-react"
+import { motion } from "framer-motion"
+import { staggerIn } from "@/lib/motion"
 
-export default async function KidProfilePage() {
-  const user = await requireChild()
-  const supabase = await createClient()
+export default function KidProfilePage() {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Get user stats
-  const { data: points } = await supabase.from("starsprout_user_points").select("*").eq("user_id", user.id).single()
+  useEffect(() => {
+    async function loadProfile() {
+      const user = await requireChild()
+      const supabase = await createClient()
 
-  const { data: streak } = await supabase.from("starsprout_streaks").select("*").eq("user_id", user.id).single()
+      const { data: points } = await supabase.from("starsprout_user_points").select("*").eq("user_id", user.id).single()
+      const { data: streak } = await supabase.from("starsprout_streaks").select("*").eq("user_id", user.id).single()
+      const { data: badges } = await supabase
+        .from("starsprout_user_badges")
+        .select("*, badge:starsprout_badges(*)")
+        .eq("user_id", user.id)
+        .order("awarded_at", { ascending: false })
+      const { count: totalQuests } = await supabase
+        .from("starsprout_tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("assigned_to", user.id)
+        .eq("status", "approved")
 
-  const { data: badges } = await supabase
-    .from("starsprout_user_badges")
-    .select("*, badge:starsprout_badges(*)")
-    .eq("user_id", user.id)
-    .order("awarded_at", { ascending: false })
+      setData({ user, points, streak, badges, totalQuests })
+      setLoading(false)
+    }
 
-  const { count: totalQuests } = await supabase
-    .from("starsprout_tasks")
-    .select("*", { count: "exact", head: true })
-    .eq("assigned_to", user.id)
-    .eq("status", "approved")
+    loadProfile()
+  }, [])
+
+  if (loading || !data) {
+    return <div>Loading...</div>
+  }
+
+  const { user, points, streak, badges, totalQuests } = data
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
@@ -38,67 +57,42 @@ export default async function KidProfilePage() {
 
       <main className="container mx-auto flex-1 p-6 max-w-4xl">
         {/* Profile Header */}
-        <Card className="mb-8 bg-gradient-to-br from-indigo-100 to-purple-100 border-indigo-200">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">
-                {user.nickname.charAt(0).toUpperCase()}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <Card className="mb-8 bg-gradient-to-br from-indigo-100 to-purple-100 border-indigo-200">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">
+                  {user.nickname.charAt(0).toUpperCase()}
+                </div>
+                <h2 className="text-3xl font-bold mb-1">{user.nickname}</h2>
+                <p className="text-muted-foreground">{user.ageBand?.replace("_", " ")}</p>
               </div>
-              <h2 className="text-3xl font-bold mb-1">{user.nickname}</h2>
-              <p className="text-muted-foreground">{user.ageBand?.replace("_", " ")}</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Points</p>
-                  <p className="text-2xl font-bold">{points?.total_points || 0}</p>
-                </div>
-                <Star className="h-8 w-8 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-2xl font-bold">{streak?.current_streak || 0}</p>
-                </div>
-                <Flame className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Best Streak</p>
-                  <p className="text-2xl font-bold">{streak?.longest_streak || 0}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Quests Done</p>
-                  <p className="text-2xl font-bold">{totalQuests || 0}</p>
-                </div>
-                <Trophy className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
+          {[
+            { label: "Total Points", value: points?.total_points || 0, icon: Star, color: "text-yellow-500" },
+            { label: "Current Streak", value: streak?.current_streak || 0, icon: Flame, color: "text-orange-500" },
+            { label: "Best Streak", value: streak?.longest_streak || 0, icon: TrendingUp, color: "text-green-500" },
+            { label: "Quests Done", value: totalQuests || 0, icon: Trophy, color: "text-purple-500" },
+          ].map((stat, index) => (
+            <motion.div key={stat.label} variants={staggerIn} initial="initial" animate="animate" custom={index}>
+              <Card className="bg-white/80 backdrop-blur-sm">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    </div>
+                    <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
         {/* Badges Collection */}
@@ -110,9 +104,14 @@ export default async function KidProfilePage() {
           <CardContent>
             {badges && badges.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {badges.map((userBadge: any) => (
-                  <div
+                {badges.map((userBadge: any, index: number) => (
+                  <motion.div
                     key={userBadge.id}
+                    variants={staggerIn}
+                    initial="initial"
+                    animate="animate"
+                    custom={index}
+                    whileHover={{ scale: 1.05 }}
                     className="flex flex-col items-center p-6 rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-200 border-2 border-yellow-300"
                   >
                     <div className="text-5xl mb-3">🏆</div>
@@ -123,7 +122,7 @@ export default async function KidProfilePage() {
                     <Badge variant="secondary" className="mt-2 text-xs">
                       {new Date(userBadge.awarded_at).toLocaleDateString()}
                     </Badge>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (

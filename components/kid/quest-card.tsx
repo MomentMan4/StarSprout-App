@@ -5,9 +5,10 @@ import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, Star } from "lucide-react"
+import { Clock, Star, Sparkles } from "lucide-react"
 import { submitTask } from "@/app/actions/quest-actions"
-import { haptic } from "@/lib/utils/haptics"
+import { haptic } from "@/lib/haptics"
+import { cardPress } from "@/lib/motion"
 import { useRouter } from "next/navigation"
 
 interface QuestCardProps {
@@ -22,13 +23,13 @@ export function QuestCard({ quest, onSubmit }: QuestCardProps) {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    haptic("medium")
+    haptic("TAP")
 
     const result = await submitTask(quest.id)
 
     if (result.success) {
       setShowCelebration(true)
-      haptic("success")
+      haptic("SUCCESS")
 
       setTimeout(() => {
         onSubmit(quest)
@@ -36,21 +37,26 @@ export function QuestCard({ quest, onSubmit }: QuestCardProps) {
       }, 800)
     } else {
       setIsSubmitting(false)
-      haptic("error")
     }
   }
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="relative">
+    <motion.div
+      variants={cardPress}
+      initial="rest"
+      whileTap="pressed"
+      transition={{ duration: 0.15 }}
+      className="relative"
+    >
       <Card className="border-2 border-indigo-300 bg-gradient-to-r from-indigo-50 to-purple-50 hover:border-indigo-400 transition-all shadow-md hover:shadow-lg overflow-hidden">
         {showCelebration && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 2, opacity: [0, 1, 0] }}
-            transition={{ duration: 0.8 }}
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: [0.6, 1.2, 1], opacity: [0, 1, 0] }}
+            transition={{ duration: 0.8, times: [0, 0.4, 1] }}
             className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
           >
-            <div className="text-8xl">✨</div>
+            <Sparkles className="h-24 w-24 text-yellow-400" />
           </motion.div>
         )}
 
@@ -82,14 +88,16 @@ export function QuestCard({ quest, onSubmit }: QuestCardProps) {
             </div>
           </div>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            size="lg"
-            className="w-full h-14 text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
-          >
-            {isSubmitting ? "Sending..." : "I Did It! ✓"}
-          </Button>
+          <motion.div animate={isSubmitting ? { scale: [1, 1.02, 1] } : {}} transition={{ duration: 0.4 }}>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              size="lg"
+              className="w-full h-14 text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
+            >
+              {isSubmitting ? "Sending..." : "I Did It! ✓"}
+            </Button>
+          </motion.div>
         </CardContent>
       </Card>
     </motion.div>

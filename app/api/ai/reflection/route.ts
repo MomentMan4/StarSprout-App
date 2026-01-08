@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateReflectionPrompt, checkRateLimit } from "@/lib/ai"
+import { generateReflectionPrompt } from "@/lib/ai"
 import { isAIReflectionEnabled } from "@/lib/db/repositories/settings"
 import { auth } from "@clerk/nextjs/server"
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +11,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Rate limiting: 10 requests per minute
-    if (!checkRateLimit(userId, 10, 60000)) {
-      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+    const rateLimitResult = await rateLimit(`ai_reflection:${userId}`, RATE_LIMITS.AI_REFLECTION)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+          },
+        },
+      )
     }
 
     const { questTitle, childNickname, ageBand, householdId } = await request.json()

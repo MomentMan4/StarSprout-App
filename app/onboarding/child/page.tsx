@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { Suspense } from "react"
+import { motion } from "framer-motion"
+import { haptics } from "@/lib/haptics"
+import { fadeIn, cardPress } from "@/lib/motion"
 
 function ChildOnboardingForm() {
   const [loading, setLoading] = useState(false)
@@ -39,6 +42,7 @@ function ChildOnboardingForm() {
     }
 
     setLoading(true)
+    haptics.tap()
 
     try {
       // In a real implementation with Clerk, children would be created by parents
@@ -56,7 +60,7 @@ function ChildOnboardingForm() {
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
       <div className="w-full max-w-lg">
-        <div className="flex flex-col gap-6">
+        <motion.div className="flex flex-col gap-6" variants={fadeIn} initial="hidden" animate="visible">
           <div className="text-center mb-2">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               Join StarSprout!
@@ -112,9 +116,11 @@ function ChildOnboardingForm() {
                   </div>
                 )}
 
-                <Button onClick={handleComplete} className="w-full" disabled={loading}>
-                  {loading ? "Joining..." : "Join Family"}
-                </Button>
+                <motion.div variants={cardPress} whileTap="tap">
+                  <Button onClick={handleComplete} className="w-full" disabled={loading}>
+                    {loading ? "Joining..." : "Join Family"}
+                  </Button>
+                </motion.div>
 
                 <p className="text-xs text-center text-muted-foreground">
                   Ask your parent to create an account for you from their dashboard
@@ -122,7 +128,7 @@ function ChildOnboardingForm() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
