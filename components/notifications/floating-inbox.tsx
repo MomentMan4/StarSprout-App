@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +24,20 @@ const mockNotifications = [
 export function FloatingInbox() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications] = useState(mockNotifications)
+  const pathname = usePathname()
+  const { user } = useUser()
+
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname?.startsWith("/sign-in") ||
+    pathname?.startsWith("/sign-up") ||
+    pathname?.startsWith("/legal")
+
+  if (!user || isPublicRoute) {
+    return null
+  }
+  // </CHANGE>
+
   const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
