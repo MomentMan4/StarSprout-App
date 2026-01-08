@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 const isParentRoute = createRouteMatcher(["/parent(.*)"])
 const isChildRoute = createRouteMatcher(["/kid(.*)"])
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"])
+const isAdminRoute = createRouteMatcher(["/admin(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth()
@@ -13,7 +14,8 @@ export default clerkMiddleware(async (auth, req) => {
     req.nextUrl.pathname === "/" ||
     req.nextUrl.pathname.startsWith("/legal") ||
     req.nextUrl.pathname.startsWith("/sign-in") ||
-    req.nextUrl.pathname.startsWith("/sign-up")
+    req.nextUrl.pathname.startsWith("/sign-up") ||
+    req.nextUrl.pathname === "/admin/unauthorized"
   ) {
     return NextResponse.next()
   }
@@ -23,6 +25,11 @@ export default clerkMiddleware(async (auth, req) => {
     const signInUrl = new URL("/sign-in", req.url)
     signInUrl.searchParams.set("redirect_url", req.url)
     return NextResponse.redirect(signInUrl)
+  }
+
+  if (isAdminRoute(req)) {
+    // Admin check happens in the layout, just ensure authenticated
+    return NextResponse.next()
   }
 
   const metadata = sessionClaims?.public_metadata as

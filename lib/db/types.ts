@@ -25,12 +25,57 @@ export type EventType =
   | "friend_approved"
 
 // ============================================================================
+// ADMIN TYPES
+// ============================================================================
+
+export type UserStatus = "active" | "disabled"
+export type HouseholdStatus = "active" | "flagged" | "disabled"
+export type FeatureFlagScope = "global" | "household" | "user"
+export type AdminActionType =
+  | "UPDATE_USER"
+  | "DISABLE_USER"
+  | "ENABLE_USER"
+  | "UPDATE_HOUSEHOLD"
+  | "DISABLE_HOUSEHOLD"
+  | "UPDATE_TEMPLATE"
+  | "UPDATE_BADGE"
+  | "UPDATE_FLAG"
+  | "RUN_JOB"
+  | "REGENERATE_INVITE_CODE"
+export type AdminEntityType = "household" | "user" | "quest_template" | "badge" | "feature_flag" | "job"
+
+export interface AdminAuditLog {
+  id: string
+  actor_admin_user_id: string
+  actor_email: string
+  action_type: AdminActionType
+  entity_type: AdminEntityType
+  entity_id: string
+  before_json: Record<string, any> | null
+  after_json: Record<string, any> | null
+  metadata: Record<string, any> | null
+  created_at: string
+}
+
+export interface FeatureFlagNew {
+  id: string
+  scope_type: FeatureFlagScope
+  scope_id: string | null
+  key: string
+  enabled: boolean
+  value_json: Record<string, any> | null
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
 // DATABASE TABLE TYPES
 // ============================================================================
 
 export interface Household {
   id: string
   name: string
+  status: HouseholdStatus
   created_at: string
   updated_at: string
 }
@@ -42,6 +87,7 @@ export interface User {
   nickname: string
   avatar_url: string | null
   age_band: AgeBand | null
+  status: UserStatus
   created_at: string
   updated_at: string
 }

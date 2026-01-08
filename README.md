@@ -10,11 +10,12 @@ StarSprout is a production-ready Progressive Web App (PWA) built with Next.js 16
 - **Child Experience**: Complete quests, earn points/badges, request rewards, see progress
 - **Privacy-First Design**: COPPA/GDPR-aligned with household isolation and parental controls
 - **AI-Powered**: Optional AI features for motivational messages, reflections, and weekly insights
+- **Admin Panel**: Internal operations tool for content management and system monitoring
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router) with React 19.2
-- **Authentication**: Clerk with role-based access (parent/child) and household metadata
+- **Authentication**: Clerk with role-based access (parent/child/admin) and household metadata
 - **Database**: Supabase Postgres with Row Level Security (RLS)
 - **Caching**: Upstash Redis for leaderboards and aggregates
 - **Styling**: Tailwind CSS v4 + shadcn/ui components
@@ -80,6 +81,7 @@ starsprout/
 │   ├── onboarding/        # Parent and child onboarding flows
 │   ├── parent/            # Parent dashboard and management
 │   ├── kid/               # Child quest experience
+│   ├── admin/             # Admin panel (internal ops)
 │   ├── legal/             # Privacy policy and terms
 │   └── api/
 │       ├── auth/          # Auth API routes (metadata updates)
@@ -91,6 +93,7 @@ starsprout/
 │   └── weekly-summary.tsx # Weekly insights email
 ├── lib/
 │   ├── auth/              # Auth helpers and role management (Clerk)
+│   ├── adminAuth.ts       # Admin-specific auth helpers
 │   ├── db/                # Database client and types
 │   │   └── repositories/  # Domain-specific data access
 │   ├── ai/                # OpenAI integration wrapper
@@ -104,6 +107,7 @@ starsprout/
 │   ├── ui/                # shadcn/ui components
 │   ├── kid/               # Child-specific components
 │   ├── parent/            # Parent-specific components
+│   ├── admin/             # Admin panel components
 │   ├── onboarding/        # Onboarding flow components
 │   └── notifications/     # MagicBell integration
 ├── scripts/               # SQL database migrations
@@ -125,13 +129,7 @@ StarSprout uses Clerk for authentication with custom role-based access:
 
 - **Parent**: Can access `/parent/*` routes, manage household, approve actions
 - **Child**: Can access `/kid/*` routes, complete quests, request rewards
-
-### Household Scoping
-
-All users must have a `household_id` in their Clerk metadata. This ensures:
-- Data isolation between families
-- Proper RLS enforcement in Supabase
-- Parent-child relationships
+- **Admin**: Can access `/admin/*` routes, internal operations tool (requires dual auth)
 
 ## Key Features
 
@@ -155,6 +153,17 @@ All users must have a `household_id` in their Clerk metadata. This ensures:
 - Safe, parent-approved friend connections
 - Age-appropriate UI and motivational messages
 - Friends-only leaderboard
+
+### For Admins
+
+- View system metrics (households, users, tasks)
+- Manage all households
+- View user details and activity
+- Create and manage quest templates
+- Manage badge definitions and criteria
+- Toggle features per household/user
+- Monitor cron job execution
+- View all system activity events
 
 ## Database Schema
 
@@ -224,6 +233,10 @@ All AI features:
 - Role-based route protection via middleware
 - Rate limiting on AI endpoints
 - CRON_SECRET protection for scheduled jobs
+- Admin routes protected by dual authentication (role + allowlist)
+- No impersonation feature (by design)
+- All admin actions write to audit logs
+- Unauthorized access shows a clean error page with no data leakage
 
 ## PWA Configuration
 
@@ -275,6 +288,7 @@ npm run typecheck
 - `BLOB_READ_WRITE_TOKEN` - Enable file uploads (avatars, badges)
 - `CRON_SECRET` - Secure scheduled jobs (weekly summary)
 - `NEXT_PUBLIC_APP_URL` - App URL for email links (production)
+- `ADMIN_EMAIL_ALLOWLIST` - Comma-separated admin email addresses
 
 ## Deployment
 

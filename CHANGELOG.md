@@ -5,6 +5,41 @@ All notable changes to StarSprout MVP will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-08
+
+### Added
+- **Admin Panel**: Complete admin architecture for internal operations
+  - `/admin` route group with sidebar navigation and responsive layout
+  - Admin authentication guard with dual verification:
+    - Clerk `privateMetadata.role === 'admin'` check
+    - Email allowlist via `ADMIN_EMAIL_ALLOWLIST` environment variable
+  - Admin dashboard with system metrics (households, users, tasks)
+  - Placeholder pages for all admin features:
+    - Households listing and detail views
+    - User detail views
+    - Quest template management
+    - Badge management
+    - Feature flags control
+    - Background job monitoring
+    - Audit log viewer
+  - Environment badge (dev/staging/prod) in header
+  - Professional, calm UI design using shadcn components
+  - No impersonation feature (by design)
+  - Unauthorized access page with clear messaging
+
+### Changed
+- Updated middleware to protect `/admin` routes with authentication check
+- Added `ADMIN_EMAIL_ALLOWLIST` to `.env.example`
+- Created `lib/adminAuth.ts` with admin-specific helpers:
+  - `requireAdmin()` - throws if not admin
+  - `isAdminUser()` - boolean check
+  - `getAdminIdentity()` - returns admin user or null
+
+### Security
+- Admin routes require BOTH Clerk role and email allowlist match
+- All admin mutations will write to audit logs (implementation in next phase)
+- No data leakage on unauthorized access attempts
+
 ## [0.3.0] - 2026-01-08
 
 ### Added
