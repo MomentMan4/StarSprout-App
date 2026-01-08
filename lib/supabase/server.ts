@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
 export async function createClient() {
@@ -7,13 +7,13 @@ export async function createClient() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ""
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
+  console.log("[v0] Creating Supabase client - URL exists:", !!supabaseUrl, "Key exists:", !!supabaseAnonKey)
+
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("[Supabase] Missing environment variables for Supabase connection")
-    // Return a mock client that will fail gracefully
-    return createSupabaseClient(supabaseUrl || "https://placeholder.supabase.co", supabaseAnonKey || "placeholder")
+    throw new Error("Missing Supabase environment variables. Please check SUPABASE_URL and SUPABASE_ANON_KEY")
   }
 
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()
