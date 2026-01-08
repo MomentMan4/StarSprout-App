@@ -151,15 +151,15 @@ export default function ParentOnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-svh max-h-svh w-full items-center justify-center overflow-y-auto p-6 md:p-10 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="w-full max-w-2xl py-6">
-        <div className="flex flex-col gap-6">
-          <div className="text-center mb-2">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="h-8 w-8 text-indigo-600" />
-              <h1 className="text-4xl font-bold text-indigo-600">Welcome to StarSprout</h1>
+    <div className="flex min-h-svh max-h-svh w-full items-center justify-center overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="w-full max-w-2xl">
+        <div className="flex flex-col gap-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sparkles className="h-7 w-7 text-indigo-600" />
+              <h1 className="text-3xl font-bold text-indigo-600">Welcome to StarSprout</h1>
             </div>
-            <p className="text-sm text-muted-foreground">Let's set up your family in just a few steps</p>
+            <p className="text-xs text-muted-foreground">Let's set up your family in just a few steps</p>
           </div>
 
           <Stepper steps={STEPS} currentStep={step} />
@@ -177,7 +177,7 @@ export default function ParentOnboardingPage() {
             >
               {step === 1 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <CardTitle>Create Your Household</CardTitle>
                     <CardDescription>Give your family a fun name</CardDescription>
                   </CardHeader>
@@ -203,13 +203,13 @@ export default function ParentOnboardingPage() {
               )}
 
               {step === 2 && (
-                <Card className="max-h-[calc(100svh-280px)] flex flex-col">
-                  <CardHeader className="flex-shrink-0">
+                <Card>
+                  <CardHeader className="pb-3">
                     <CardTitle>Add Your First Child</CardTitle>
                     <CardDescription>We'll create their StarSprout profile</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto">
-                    <div className="grid gap-6 pb-2">
+                  <CardContent>
+                    <div className="grid gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="nickname">Child's Nickname</Label>
                         <Input
@@ -240,11 +240,11 @@ export default function ParentOnboardingPage() {
 
                       {error && <p className="text-sm text-red-500">{error}</p>}
 
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" onClick={handleBack} className="w-full bg-transparent">
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                           Back
                         </Button>
-                        <Button onClick={handleNext} className="w-full">
+                        <Button onClick={handleNext} className="flex-1">
                           Next
                         </Button>
                       </div>
@@ -255,12 +255,12 @@ export default function ParentOnboardingPage() {
 
               {step === 3 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <CardTitle>Privacy & Consent</CardTitle>
                     <CardDescription>Your trust is our top priority</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-6">
+                    <div className="grid gap-5">
                       <div className="flex items-start space-x-3">
                         <Checkbox
                           id="coppa"
@@ -321,10 +321,10 @@ export default function ParentOnboardingPage() {
                       {error && <p className="text-sm text-red-500">{error}</p>}
 
                       <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleBack} className="w-full bg-transparent">
+                        <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                           Back
                         </Button>
-                        <Button onClick={handleNext} className="w-full">
+                        <Button onClick={handleNext} className="flex-1">
                           Next
                         </Button>
                       </div>
@@ -335,24 +335,24 @@ export default function ParentOnboardingPage() {
 
               {step === 4 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <CardTitle>Assign First Quest</CardTitle>
                     <CardDescription>Pick a starter quest for {childNickname}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-6">
-                      <div className="grid grid-cols-1 gap-3">
+                    <div className="grid gap-5">
+                      <div className="grid grid-cols-1 gap-2">
                         {STARTER_QUESTS.map((quest, index) => (
                           <button
                             key={index}
                             type="button"
                             onClick={() => setSelectedQuest(index)}
                             className={cn(
-                              "flex items-center gap-4 rounded-lg border-2 p-4 text-left transition-all hover:bg-gray-50",
+                              "flex items-center gap-4 rounded-lg border-2 p-3 text-left transition-all hover:bg-gray-50",
                               selectedQuest === index ? "border-indigo-600 bg-indigo-50" : "border-gray-200",
                             )}
                           >
-                            <span className="text-3xl">{quest.emoji}</span>
+                            <span className="text-2xl">{quest.emoji}</span>
                             <div className="flex-1">
                               <p className="font-medium">{quest.title}</p>
                               <p className="text-sm text-muted-foreground">{quest.points} points</p>
@@ -367,12 +367,12 @@ export default function ParentOnboardingPage() {
                         <Button
                           variant="outline"
                           onClick={handleBack}
-                          className="w-full bg-transparent"
+                          className="flex-1 bg-transparent"
                           disabled={submitting}
                         >
                           Back
                         </Button>
-                        <Button onClick={handleComplete} className="w-full" disabled={submitting}>
+                        <Button onClick={handleComplete} className="flex-1" disabled={submitting}>
                           {submitting ? "Setting up..." : "Complete Setup"}
                         </Button>
                       </div>
