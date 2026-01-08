@@ -1,5 +1,3 @@
-"use client"
-
 import { requireChild } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
