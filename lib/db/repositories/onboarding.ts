@@ -19,7 +19,12 @@ import type {
 // ============================================================================
 
 export async function createHousehold(input: CreateHouseholdInput): Promise<Household | null> {
+  console.log("[v0] createHousehold called with input:", JSON.stringify(input))
+
   const supabase = await createClient()
+
+  console.log("[v0] Supabase client created successfully")
+  console.log("[v0] Attempting to insert household:", input.name)
 
   const { data, error } = await supabase
     .from("starsprout_households")
@@ -30,10 +35,16 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<Hous
     .single()
 
   if (error) {
-    console.error("[v0] Error creating household:", error)
+    console.error("[v0] ✗✗✗ HOUSEHOLD CREATION ERROR ✗✗✗")
+    console.error("[v0] Error code:", error.code)
+    console.error("[v0] Error message:", error.message)
+    console.error("[v0] Error details:", JSON.stringify(error.details))
+    console.error("[v0] Error hint:", error.hint)
+    console.error("[v0] Full error:", JSON.stringify(error, null, 2))
     return null
   }
 
+  console.log("[v0] ✓ Household created successfully:", JSON.stringify(data))
   return data
 }
 
@@ -42,6 +53,8 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<Hous
 // ============================================================================
 
 export async function createUser(input: CreateUserInput): Promise<User | null> {
+  console.log("[v0] createUser called with input:", JSON.stringify(input))
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -58,9 +71,15 @@ export async function createUser(input: CreateUserInput): Promise<User | null> {
     .single()
 
   if (error) {
-    console.error("[v0] Error creating user:", error)
+    console.error("[v0] ✗✗✗ USER CREATION ERROR ✗✗✗")
+    console.error("[v0] Error code:", error.code)
+    console.error("[v0] Error message:", error.message)
+    console.error("[v0] Error details:", JSON.stringify(error.details))
+    console.error("[v0] Full error:", JSON.stringify(error, null, 2))
     return null
   }
+
+  console.log("[v0] ✓ User created successfully:", data.id)
 
   // Initialize user points record
   await supabase.from("starsprout_user_points").insert({

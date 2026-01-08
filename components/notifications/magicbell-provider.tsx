@@ -18,7 +18,8 @@ export function MagicBellProvider({ children }: { children: React.ReactNode }) {
     pathname === "/" ||
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up") ||
-    pathname?.startsWith("/legal")
+    pathname?.startsWith("/legal") ||
+    pathname?.startsWith("/onboarding")
 
   useEffect(() => {
     if (user && !isPublicRoute) {

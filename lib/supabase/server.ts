@@ -7,7 +7,13 @@ export async function createClient() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ""
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-  console.log("[v0] Creating Supabase client - URL exists:", !!supabaseUrl, "Key exists:", !!supabaseAnonKey)
+  console.log("[v0] ========================================")
+  console.log("[v0] Creating Supabase client")
+  console.log("[v0] - URL exists:", !!supabaseUrl)
+  console.log("[v0] - URL value:", supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : "MISSING")
+  console.log("[v0] - Key exists:", !!supabaseAnonKey)
+  console.log("[v0] - Key value:", supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : "MISSING")
+  console.log("[v0] ========================================")
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables. Please check SUPABASE_URL and SUPABASE_ANON_KEY")

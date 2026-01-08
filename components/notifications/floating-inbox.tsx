@@ -33,7 +33,8 @@ export function FloatingInbox() {
     pathname === "/" ||
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up") ||
-    pathname?.startsWith("/legal")
+    pathname?.startsWith("/legal") ||
+    pathname?.startsWith("/onboarding")
 
   if (!user || isPublicRoute) {
     return null
