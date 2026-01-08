@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Star, Trophy, Flame, TrendingUp } from "lucide-react"
 import { motion } from "framer-motion"
-import { staggerIn } from "@/lib/motion"
+import { staggerContainer, staggerIn } from "@/lib/motion"
 
 interface KidProfileClientProps {
   user: {
@@ -59,14 +59,19 @@ export function KidProfileClient({ user, points, streak, badges, totalQuests }: 
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-6 sm:mb-8">
+        <motion.div
+          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-6 sm:mb-8"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {[
             { label: "Total Points", value: points?.total_points || 0, icon: Star, color: "text-yellow-500" },
             { label: "Current Streak", value: streak?.current_streak || 0, icon: Flame, color: "text-orange-500" },
             { label: "Best Streak", value: streak?.longest_streak || 0, icon: TrendingUp, color: "text-green-500" },
             { label: "Quests Done", value: totalQuests || 0, icon: Trophy, color: "text-purple-500" },
-          ].map((stat, index) => (
-            <motion.div key={stat.label} variants={staggerIn} initial="initial" animate="animate" custom={index}>
+          ].map((stat) => (
+            <motion.div key={stat.label} variants={staggerIn}>
               <Card className="bg-white/80 backdrop-blur-sm">
                 <CardContent className="pt-4 sm:pt-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -80,7 +85,7 @@ export function KidProfileClient({ user, points, streak, badges, totalQuests }: 
               </Card>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Badges Collection */}
         <Card className="bg-white/80 backdrop-blur-sm">
@@ -90,14 +95,16 @@ export function KidProfileClient({ user, points, streak, badges, totalQuests }: 
           </CardHeader>
           <CardContent>
             {badges && badges.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {badges.map((userBadge: any, index: number) => (
+              <motion.div
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {badges.map((userBadge: any) => (
                   <motion.div
                     key={userBadge.id}
                     variants={staggerIn}
-                    initial="initial"
-                    animate="animate"
-                    custom={index}
                     whileHover={{ scale: 1.05 }}
                     className="flex flex-col items-center p-4 sm:p-6 rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-200 border-2 border-yellow-300"
                   >
@@ -111,7 +118,7 @@ export function KidProfileClient({ user, points, streak, badges, totalQuests }: 
                     </Badge>
                   </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               <div className="text-center py-8 sm:py-12">
                 <p className="text-base sm:text-lg text-muted-foreground mb-2">No badges yet!</p>
