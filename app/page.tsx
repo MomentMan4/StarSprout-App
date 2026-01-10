@@ -6,6 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Sparkles, Shield, Heart, Star, Zap, Trophy } from "lucide-react"
 import { useEffect } from "react"
+import { PreviewNotice } from "@/components/preview-notice"
 
 export default function LandingPage() {
   useEffect(() => {
@@ -19,6 +20,8 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <PreviewNotice />
+
       {/* Hero Section */}
       <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

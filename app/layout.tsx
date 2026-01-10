@@ -47,6 +47,15 @@ export default function RootLayout({
 }>) {
   const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
+  const isV0Preview =
+    typeof window !== "undefined"
+      ? window.location.hostname.includes("v0.app") || window.location.hostname.includes("vercel.app")
+      : false
+
+  const isProductionKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_")
+
+  const shouldUseClerk = hasClerkKey && !(isV0Preview && isProductionKey)
+
   const content = (
     <html lang="en">
       <body className={`font-sans antialiased`}>
@@ -59,8 +68,14 @@ export default function RootLayout({
     </html>
   )
 
-  if (hasClerkKey) {
+  if (shouldUseClerk) {
     return <ClerkProvider>{content}</ClerkProvider>
+  }
+
+  if (hasClerkKey && !shouldUseClerk) {
+    console.warn(
+      "[v0] Production Clerk keys detected in preview environment - Clerk disabled to prevent domain mismatch errors",
+    )
   }
 
   return content

@@ -1,7 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 const hasClerkConfig = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY
+const isProductionKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_")
+
+function isV0PreviewRequest(req: NextRequest): boolean {
+  const hostname = req.headers.get("host") || ""
+  return hostname.includes("v0.app") || hostname.includes("vercel.app")
+}
 
 const isParentRoute = hasClerkConfig ? createRouteMatcher(["/parent(.*)"]) : () => false
 const isChildRoute = hasClerkConfig ? createRouteMatcher(["/kid(.*)"]) : () => false
@@ -11,6 +18,12 @@ const isAdminRoute = hasClerkConfig ? createRouteMatcher(["/admin(.*)"]) : () =>
 export default clerkMiddleware(
   async (auth, req) => {
     console.log("[v0] Middleware executing for:", req.nextUrl.pathname)
+
+    const isPreview = isV0PreviewRequest(req)
+    if (isPreview && isProductionKey) {
+      console.log("[v0] Production Clerk keys detected in v0 preview - bypassing all auth")
+      return NextResponse.next()
+    }
 
     if (!hasClerkConfig) {
       console.log("[v0] Clerk not configured - allowing all routes in preview mode")
@@ -72,7 +85,13 @@ export default clerkMiddleware(
   },
   {
     debug: true,
-    ignoredRoutes: !hasClerkConfig ? ["/(.*)"] : [],
+    ignoredRoutes:
+      !hasClerkConfig ||
+      (isProductionKey &&
+        typeof window !== "undefined" &&
+        (window.location?.hostname?.includes("v0.app") || window.location?.hostname?.includes("vercel.app")))
+        ? ["/(.*)"]
+        : [],
   },
 )
 

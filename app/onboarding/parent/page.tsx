@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { motion, AnimatePresence } from "framer-motion"
@@ -16,6 +16,8 @@ import { Sparkles, AlertCircle } from "lucide-react"
 import { haptics } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
 import { completeParentOnboarding } from "@/app/actions/onboarding"
+import { AuthErrorPanel } from "@/components/auth/auth-error-panel"
+import { checkAuthHealth, getAuthHealthMessage } from "@/lib/auth/health"
 
 const STEPS = ["Household", "First Child", "Consent", "First Quest"]
 const STARTER_QUESTS = [
@@ -25,13 +27,18 @@ const STARTER_QUESTS = [
   { title: "Help with Dishes", category: "chores", points: 10, emoji: "🍽️" },
 ]
 
+const AUTH_LOADING_TIMEOUT = 8000
+
 export default function ParentOnboardingPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<{ message: string; code?: string } | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [authDiagnostic, setAuthDiagnostic] = useState<string | null>(null)
   const router = useRouter()
   const { user, isLoaded } = useUser()
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Form state
   const [householdName, setHouseholdName] = useState("")
@@ -44,24 +51,67 @@ export default function ParentOnboardingPage() {
   const [selectedQuest, setSelectedQuest] = useState(0)
 
   useEffect(() => {
+    console.log("[onboarding:redirect] Starting auth check, isLoaded:", isLoaded)
+
+    // Set timeout for auth loading
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (!isLoaded) {
+        console.error("[auth:restore] Auth loading timeout after 8 seconds")
+        const health = checkAuthHealth()
+        setAuthError("Session couldn't be restored. Please refresh or sign in again.")
+        setAuthDiagnostic(health.isHealthy ? undefined : getAuthHealthMessage(health))
+        setLoading(false)
+      }
+    }, AUTH_LOADING_TIMEOUT)
+
     if (isLoaded) {
+      // Clear timeout if auth loads successfully
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+        loadingTimeoutRef.current = null
+      }
       checkOnboardingStatus()
+    }
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+      }
     }
   }, [isLoaded, user])
 
   async function checkOnboardingStatus() {
+    console.log("[onboarding:redirect] Checking onboarding status")
+
     if (!user) {
+      console.log("[onboarding:redirect] No user, redirecting to sign-in")
       router.push("/sign-in")
       return
     }
 
-    const metadata = user.publicMetadata as { setup_complete?: boolean; role?: string }
-    if (metadata.setup_complete) {
+    const metadata = user.publicMetadata as { setup_complete?: boolean; role?: string; app_user_id?: string }
+    console.log("[onboarding:redirect] User metadata:", {
+      setupComplete: metadata.setup_complete,
+      role: metadata.role,
+      appUserId: metadata.app_user_id,
+    })
+
+    if (metadata.setup_complete && metadata.app_user_id) {
+      console.log("[onboarding:redirect] Onboarding already complete, redirecting to dashboard")
       router.push("/parent/dashboard")
       return
     }
 
+    console.log("[onboarding:redirect] Onboarding not complete, showing form")
     setLoading(false)
+  }
+
+  function handleRetryAuth() {
+    console.log("[auth:restore] Retrying auth check")
+    setAuthError(null)
+    setAuthDiagnostic(null)
+    setLoading(true)
+    window.location.reload()
   }
 
   function handleNext() {
@@ -143,10 +193,12 @@ export default function ParentOnboardingPage() {
       haptics.celebration()
 
       if (user) {
+        console.log("[onboarding:redirect] Onboarding successful, redirecting to /parent/dashboard")
         router.push("/parent/dashboard")
       } else {
         console.log("[v0] Preview mode - onboarding complete!")
         setError({ message: "Onboarding complete! (Preview mode - would redirect to dashboard)" })
+        setSubmitting(false)
       }
     } catch (err: any) {
       console.error("[v0] Onboarding error:", err)
@@ -156,6 +208,10 @@ export default function ParentOnboardingPage() {
       })
       setSubmitting(false)
     }
+  }
+
+  if (authError) {
+    return <AuthErrorPanel message={authError} diagnosticHint={authDiagnostic || undefined} onRetry={handleRetryAuth} />
   }
 
   if (!isLoaded || loading) {
@@ -416,9 +472,15 @@ export default function ParentOnboardingPage() {
                           <div className="flex-1">
                             <p className="text-sm font-medium text-red-900">{error.message}</p>
                             {error.code && <p className="text-xs text-red-700 mt-0.5">Error code: {error.code}</p>}
-                            <p className="text-xs text-red-700 mt-1">
-                              You can try again or contact support if this persists.
-                            </p>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={handleComplete}
+                              className="h-auto p-0 text-xs text-red-700 underline mt-1"
+                              disabled={submitting}
+                            >
+                              Retry
+                            </Button>
                           </div>
                         </div>
                       )}
