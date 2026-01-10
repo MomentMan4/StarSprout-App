@@ -1,6 +1,7 @@
 // Onboarding Repository - Handles household setup and user creation
 
 import { createClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/db/supabaseAdmin"
 import { logActivity } from "../repositories/activity"
 import type {
   CreateHouseholdInput,
@@ -14,110 +15,196 @@ import type {
   InviteCode,
 } from "../types"
 
+export interface SupabaseStructuredError {
+  message: string
+  code?: string
+  details?: string
+  hint?: string
+}
+
 // ============================================================================
 // HOUSEHOLD CREATION
 // ============================================================================
 
-export async function createHousehold(input: CreateHouseholdInput): Promise<Household | null> {
-  console.log("[v0] createHousehold called with input:", JSON.stringify(input))
+export async function createHousehold(
+  input: CreateHouseholdInput & { owner_clerk_user_id: string },
+): Promise<{ data: Household | null; error: SupabaseStructuredError | null }> {
+  console.log("[onboarding:createHousehold] Called with input:", JSON.stringify(input))
 
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
-  console.log("[v0] Supabase client created successfully")
-  console.log("[v0] Attempting to insert household:", input.name)
+  try {
+    console.log("[onboarding:createHousehold] Checking for existing household owned by:", input.owner_clerk_user_id)
 
-  const { data, error } = await supabase
-    .from("starsprout_households")
-    .insert({
-      name: input.name,
-    })
-    .select()
-    .single()
+    const { data: existingHouseholds, error: fetchError } = await supabase
+      .from("starsprout_households")
+      .select("*, starsprout_users!inner(id, role)")
+      .eq("starsprout_users.id", input.owner_clerk_user_id)
+      .eq("starsprout_users.role", "parent")
+      .limit(1)
 
-  if (error) {
-    console.error("[v0] ✗✗✗ HOUSEHOLD CREATION ERROR ✗✗✗")
-    console.error("[v0] Error code:", error.code)
-    console.error("[v0] Error message:", error.message)
-    console.error("[v0] Error details:", JSON.stringify(error.details))
-    console.error("[v0] Error hint:", error.hint)
-    console.error("[v0] Full error:", JSON.stringify(error, null, 2))
-    return null
+    if (fetchError) {
+      console.error("[onboarding:createHousehold] Error checking existing household:", {
+        code: fetchError.code,
+        message: fetchError.message,
+        details: fetchError.details,
+        hint: fetchError.hint,
+      })
+    } else if (existingHouseholds && existingHouseholds.length > 0) {
+      console.log("[onboarding:createHousehold] ✓ Found existing household (idempotent):", existingHouseholds[0].id)
+      return { data: existingHouseholds[0] as Household, error: null }
+    }
+
+    console.log("[onboarding:createHousehold] Creating new household:", input.name)
+
+    const { data, error } = await supabase
+      .from("starsprout_households")
+      .insert({
+        name: input.name,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[onboarding:createHousehold] ✗✗✗ HOUSEHOLD CREATION ERROR ✗✗✗")
+      console.error("[onboarding:createHousehold] Error code:", error.code)
+      console.error("[onboarding:createHousehold] Error message:", error.message)
+      console.error("[onboarding:createHousehold] Error details:", error.details)
+      console.error("[onboarding:createHousehold] Error hint:", error.hint)
+      console.error("[onboarding:createHousehold] Owner Clerk ID:", input.owner_clerk_user_id)
+
+      return {
+        data: null,
+        error: {
+          message: error.message || "Failed to create household",
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        },
+      }
+    }
+
+    console.log("[onboarding:createHousehold] ✓ Household created successfully:", data.id)
+    return { data, error: null }
+  } catch (err: any) {
+    console.error("[onboarding:createHousehold] ✗✗✗ UNEXPECTED ERROR ✗✗✗")
+    console.error("[onboarding:createHousehold] Error:", err)
+    console.error("[onboarding:createHousehold] Stack:", err.stack)
+
+    return {
+      data: null,
+      error: {
+        message: err.message || "Unexpected error during household creation",
+        code: "UNEXPECTED_ERROR",
+      },
+    }
   }
-
-  console.log("[v0] ✓ Household created successfully:", JSON.stringify(data))
-  return data
 }
 
 // ============================================================================
 // USER CREATION
 // ============================================================================
 
-export async function createUser(input: CreateUserInput): Promise<User | null> {
-  console.log("[v0] createUser called with input:", JSON.stringify(input))
+export async function createUser(
+  input: CreateUserInput,
+): Promise<{ data: User | null; error: SupabaseStructuredError | null }> {
+  console.log(
+    "[onboarding:createUser] Called with input:",
+    JSON.stringify({ ...input, id: `${input.id.substring(0, 10)}...` }),
+  )
 
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
-  const { data, error } = await supabase
-    .from("starsprout_users")
-    .insert({
-      id: input.id,
+  try {
+    const { data: existingUser } = await supabase.from("starsprout_users").select("*").eq("id", input.id).single()
+
+    if (existingUser) {
+      console.log("[onboarding:createUser] ✓ User already exists (idempotent):", existingUser.id)
+      return { data: existingUser, error: null }
+    }
+
+    const { data, error } = await supabase
+      .from("starsprout_users")
+      .insert({
+        id: input.id,
+        household_id: input.household_id,
+        role: input.role,
+        nickname: input.nickname,
+        avatar_url: input.avatar_url || null,
+        age_band: input.age_band || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[onboarding:createUser] ✗✗✗ USER CREATION ERROR ✗✗✗")
+      console.error("[onboarding:createUser] Error code:", error.code)
+      console.error("[onboarding:createUser] Error message:", error.message)
+      console.error("[onboarding:createUser] Error details:", error.details)
+      console.error("[onboarding:createUser] Error hint:", error.hint)
+
+      return {
+        data: null,
+        error: {
+          message: error.message || "Failed to create user",
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        },
+      }
+    }
+
+    console.log("[onboarding:createUser] ✓ User created successfully:", data.id)
+
+    // Initialize user points record
+    await supabase.from("starsprout_user_points").insert({
       household_id: input.household_id,
-      role: input.role,
-      nickname: input.nickname,
-      avatar_url: input.avatar_url || null,
-      age_band: input.age_band || null,
+      user_id: input.id,
+      total_points: 0,
+      available_points: 0,
+      spent_points: 0,
+      weekly_points: 0,
     })
-    .select()
-    .single()
 
-  if (error) {
-    console.error("[v0] ✗✗✗ USER CREATION ERROR ✗✗✗")
-    console.error("[v0] Error code:", error.code)
-    console.error("[v0] Error message:", error.message)
-    console.error("[v0] Error details:", JSON.stringify(error.details))
-    console.error("[v0] Full error:", JSON.stringify(error, null, 2))
-    return null
+    // Initialize streak record if child
+    if (input.role === "child") {
+      await supabase.from("starsprout_streaks").insert({
+        household_id: input.household_id,
+        user_id: input.id,
+        current_streak: 0,
+        longest_streak: 0,
+      })
+
+      // Initialize notification preferences
+      await supabase.from("starsprout_notification_preferences").insert({
+        user_id: input.id,
+        email_enabled: false,
+        weekly_summary_email: false,
+        in_app_enabled: true,
+      })
+    } else {
+      // Parent notification preferences
+      await supabase.from("starsprout_notification_preferences").insert({
+        user_id: input.id,
+        email_enabled: true,
+        weekly_summary_email: true,
+        in_app_enabled: true,
+      })
+    }
+
+    return { data, error: null }
+  } catch (err: any) {
+    console.error("[onboarding:createUser] ✗✗✗ UNEXPECTED ERROR ✗✗✗")
+    console.error("[onboarding:createUser] Error:", err)
+
+    return {
+      data: null,
+      error: {
+        message: err.message || "Unexpected error during user creation",
+        code: "UNEXPECTED_ERROR",
+      },
+    }
   }
-
-  console.log("[v0] ✓ User created successfully:", data.id)
-
-  // Initialize user points record
-  await supabase.from("starsprout_user_points").insert({
-    household_id: input.household_id,
-    user_id: input.id,
-    total_points: 0,
-    available_points: 0,
-    spent_points: 0,
-    weekly_points: 0,
-  })
-
-  // Initialize streak record if child
-  if (input.role === "child") {
-    await supabase.from("starsprout_streaks").insert({
-      household_id: input.household_id,
-      user_id: input.id,
-      current_streak: 0,
-      longest_streak: 0,
-    })
-
-    // Initialize notification preferences
-    await supabase.from("starsprout_notification_preferences").insert({
-      user_id: input.id,
-      email_enabled: false,
-      weekly_summary_email: false,
-      in_app_enabled: true,
-    })
-  } else {
-    // Parent notification preferences
-    await supabase.from("starsprout_notification_preferences").insert({
-      user_id: input.id,
-      email_enabled: true,
-      weekly_summary_email: true,
-      in_app_enabled: true,
-    })
-  }
-
-  return data
 }
 
 // ============================================================================
@@ -125,7 +212,7 @@ export async function createUser(input: CreateUserInput): Promise<User | null> {
 // ============================================================================
 
 export async function recordConsent(input: CreateConsentInput): Promise<Consent | null> {
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
   const { data, error } = await supabase
     .from("starsprout_consents")
@@ -141,7 +228,7 @@ export async function recordConsent(input: CreateConsentInput): Promise<Consent 
     .single()
 
   if (error) {
-    console.error("[v0] Error recording consent:", error)
+    console.error("[onboarding:recordConsent] Error recording consent:", error)
     return null
   }
 
@@ -149,7 +236,7 @@ export async function recordConsent(input: CreateConsentInput): Promise<Consent 
 }
 
 export async function recordConsents(inputs: CreateConsentInput[]): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
   const { error } = await supabase.from("starsprout_consents").insert(
     inputs.map((input) => ({
@@ -163,7 +250,7 @@ export async function recordConsents(inputs: CreateConsentInput[]): Promise<bool
   )
 
   if (error) {
-    console.error("[v0] Error recording consents:", error)
+    console.error("[onboarding:recordConsents] Error recording consents:", error)
     return false
   }
 
@@ -175,7 +262,7 @@ export async function recordConsents(inputs: CreateConsentInput[]): Promise<bool
 // ============================================================================
 
 export async function generateInviteCode(input: CreateInviteCodeInput): Promise<InviteCode | null> {
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
   // Generate a short, friendly code (6 characters: 3 letters + 3 numbers)
   const code = generateFriendlyCode()
@@ -195,7 +282,7 @@ export async function generateInviteCode(input: CreateInviteCodeInput): Promise<
     .single()
 
   if (error) {
-    console.error("[v0] Error generating invite code:", error)
+    console.error("[onboarding:generateInviteCode] Error generating invite code:", error)
     return null
   }
 
@@ -212,7 +299,7 @@ export async function getInviteCodeByCode(code: string): Promise<InviteCode | nu
     .single()
 
   if (error) {
-    console.error("[v0] Error fetching invite code:", error)
+    console.error("[onboarding:getInviteCodeByCode] Error fetching invite code:", error)
     return null
   }
 
@@ -229,7 +316,7 @@ export async function invalidateInviteCode(codeId: string): Promise<boolean> {
     .eq("id", codeId)
 
   if (error) {
-    console.error("[v0] Error invalidating invite code:", error)
+    console.error("[onboarding:invalidateInviteCode] Error invalidating invite code:", error)
     return false
   }
 
@@ -241,7 +328,7 @@ export async function invalidateInviteCode(codeId: string): Promise<boolean> {
 // ============================================================================
 
 export async function assignStarterQuest(input: AssignTaskInput): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = getSupabaseAdmin()
 
   const { data, error } = await supabase
     .from("starsprout_tasks")
@@ -262,7 +349,7 @@ export async function assignStarterQuest(input: AssignTaskInput): Promise<boolea
     .single()
 
   if (error) {
-    console.error("[v0] Error assigning starter quest:", error)
+    console.error("[onboarding:assignStarterQuest] Error assigning starter quest:", error)
     return false
   }
 
@@ -277,6 +364,54 @@ export async function assignStarterQuest(input: AssignTaskInput): Promise<boolea
   })
 
   return true
+}
+
+// ============================================================================
+// QUERY HELPERS
+// ============================================================================
+
+export async function getHouseholdById(householdId: string): Promise<Household | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.from("starsprout_households").select("*").eq("id", householdId).single()
+
+  if (error) {
+    console.error("[onboarding:getHouseholdById] Error fetching household:", error)
+    return null
+  }
+
+  return data
+}
+
+export async function getUserById(userId: string): Promise<User | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.from("starsprout_users").select("*").eq("id", userId).single()
+
+  if (error) {
+    console.error("[onboarding:getUserById] Error fetching user:", error)
+    return null
+  }
+
+  return data
+}
+
+export async function getHouseholdChildren(householdId: string): Promise<User[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("starsprout_users")
+    .select("*")
+    .eq("household_id", householdId)
+    .eq("role", "child")
+    .order("created_at", { ascending: true })
+
+  if (error) {
+    console.error("[onboarding:getHouseholdChildren] Error fetching children:", error)
+    return []
+  }
+
+  return data || []
 }
 
 // ============================================================================
@@ -300,52 +435,4 @@ function generateFriendlyCode(): string {
   }
 
   return code
-}
-
-// ============================================================================
-// QUERY HELPERS
-// ============================================================================
-
-export async function getHouseholdById(householdId: string): Promise<Household | null> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.from("starsprout_households").select("*").eq("id", householdId).single()
-
-  if (error) {
-    console.error("[v0] Error fetching household:", error)
-    return null
-  }
-
-  return data
-}
-
-export async function getUserById(userId: string): Promise<User | null> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.from("starsprout_users").select("*").eq("id", userId).single()
-
-  if (error) {
-    console.error("[v0] Error fetching user:", error)
-    return null
-  }
-
-  return data
-}
-
-export async function getHouseholdChildren(householdId: string): Promise<User[]> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from("starsprout_users")
-    .select("*")
-    .eq("household_id", householdId)
-    .eq("role", "child")
-    .order("created_at", { ascending: true })
-
-  if (error) {
-    console.error("[v0] Error fetching children:", error)
-    return []
-  }
-
-  return data || []
 }

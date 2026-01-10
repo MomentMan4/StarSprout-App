@@ -125,8 +125,18 @@ export default function ParentOnboardingPage() {
 
       console.log("[v0] Server action result:", result)
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to complete onboarding")
+      if (!result.ok) {
+        const errorMsg = result.error?.message || "Failed to complete onboarding"
+        const errorCode = result.error?.code ? ` (${result.error.code})` : ""
+        const displayError = `${errorMsg}${errorCode}`
+
+        console.error("[v0] Onboarding failed:", {
+          message: result.error?.message,
+          code: result.error?.code,
+          details: result.error?.details,
+        })
+
+        throw new Error(displayError)
       }
 
       haptics.celebration()
@@ -139,7 +149,7 @@ export default function ParentOnboardingPage() {
       }
     } catch (err: any) {
       console.error("[v0] Onboarding error:", err)
-      setError(err.message || "Failed to complete onboarding")
+      setError(err.message || "Failed to complete onboarding. Please try again.")
       setSubmitting(false)
     }
   }
