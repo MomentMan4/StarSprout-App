@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  // Return the MagicBell public API key
-  // This is safe to expose as it's the public key meant for client-side use
-  const apiKey = process.env.NEXT_PUBLIC_MAGICBELL_API_KEY || ""
+  // Return the MagicBell public API key from server-side env var
+  // This prevents exposing the key directly in client-side code
+  const apiKey = process.env.MAGICBELL_API_KEY || ""
 
   return NextResponse.json({
     apiKey,

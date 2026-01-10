@@ -2,7 +2,18 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Home, FileText, Award, Flag, Briefcase, ScrollText, User } from "lucide-react"
+import {
+  LayoutDashboard,
+  Users,
+  Home,
+  FileText,
+  Award,
+  Flag,
+  Briefcase,
+  ScrollText,
+  User,
+  ShieldCheck,
+} from "lucide-react"
 import {
   SidebarContent,
   SidebarGroup,
@@ -29,6 +40,7 @@ const systemItems = [
   { href: "/admin/feature-flags", label: "Feature Flags", icon: Flag },
   { href: "/admin/jobs", label: "Background Jobs", icon: Briefcase },
   { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+  { href: "/admin/admin-users", label: "Admin Users", icon: ShieldCheck },
 ]
 
 export function AdminNav() {

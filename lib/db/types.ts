@@ -42,6 +42,8 @@ export type AdminActionType =
   | "UPDATE_FLAG"
   | "RUN_JOB"
   | "REGENERATE_INVITE_CODE"
+  | "PROMOTE_ADMIN"
+  | "DEMOTE_ADMIN"
 export type AdminEntityType = "household" | "user" | "quest_template" | "badge" | "feature_flag" | "job"
 
 export interface AdminAuditLog {
