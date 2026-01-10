@@ -8,6 +8,7 @@ interface OnboardingResponse {
   household_id?: string
   child_id?: string
   parent_id?: string
+  app_user_id?: string // Added internal UUID for Clerk metadata
   error?: {
     message: string
     code?: string
@@ -94,10 +95,11 @@ export async function completeParentOnboarding(formData: {
       return { ok: false, error: { message: "User ID mismatch - unauthorized", code: "AUTH_ERROR" } }
     }
 
-    console.log("[onboarding:completeParentOnboarding] Step 1: Creating household:", household_name)
+    console.log("[onboarding:completeParentOnboarding] Step 1: Creating household + parent user")
     const householdResult = await createHousehold({
       name: household_name,
       owner_clerk_user_id: effectiveUserId,
+      owner_nickname: parent_nickname || "Parent",
     })
 
     if (householdResult.error || !householdResult.data) {
@@ -115,33 +117,23 @@ export async function completeParentOnboarding(formData: {
     const household = householdResult.data
     console.log("[onboarding:completeParentOnboarding] ✓ Household ready:", household.id)
 
-    console.log("[onboarding:completeParentOnboarding] Step 2: Creating parent user:", effectiveUserId)
-    const parentResult = await createUser({
-      id: effectiveUserId,
-      household_id: household.id,
-      role: "parent",
-      nickname: parent_nickname || "Parent",
-    })
-
-    if (parentResult.error || !parentResult.data) {
-      console.error("[onboarding:completeParentOnboarding] ✗ Failed to create parent user")
+    const parentAppUserId = household.owner_user_id
+    if (!parentAppUserId) {
+      console.error("[onboarding:completeParentOnboarding] ✗ No owner_user_id in household")
       return {
         ok: false,
         error: {
-          message: parentResult.error?.message || "Failed to create parent user",
-          code: parentResult.error?.code,
-          details: parentResult.error?.details,
+          message: "Failed to retrieve parent user ID",
+          code: "MISSING_PARENT_ID",
         },
       }
     }
+    console.log("[onboarding:completeParentOnboarding] ✓ Parent internal UUID:", parentAppUserId)
 
-    const parent = parentResult.data
-    console.log("[onboarding:completeParentOnboarding] ✓ Parent ready:", parent.id)
-
-    const childId = `child_${household.id}_${Date.now()}`
-    console.log("[onboarding:completeParentOnboarding] Step 3: Creating child user:", childId)
+    console.log("[onboarding:completeParentOnboarding] Step 2: Creating child user")
+    const childClerkId = `child_${household.id}_${Date.now()}`
     const childResult = await createUser({
-      id: childId,
+      clerk_user_id: childClerkId,
       household_id: household.id,
       role: "child",
       nickname: child_nickname,
@@ -162,29 +154,31 @@ export async function completeParentOnboarding(formData: {
     }
 
     const child = childResult.data
-    console.log("[onboarding:completeParentOnboarding] ✓ Child created:", child.id)
+    console.log("[onboarding:completeParentOnboarding] ✓ Child created:", {
+      internal_id: child.id,
+      clerk_id: child.clerk_user_id,
+    })
 
-    // 4. Record consents
-    console.log("[onboarding:completeParentOnboarding] Step 4: Recording consents")
+    console.log("[onboarding:completeParentOnboarding] Step 3: Recording consents")
     const consents = [
       {
         household_id: household.id,
-        parent_id: effectiveUserId,
-        child_id: childId,
+        parent_id: parentAppUserId, // Internal UUID
+        child_id: child.id, // Internal UUID
         consent_type: "coppa" as const,
         granted: consent_coppa,
       },
       {
         household_id: household.id,
-        parent_id: effectiveUserId,
-        child_id: childId,
+        parent_id: parentAppUserId,
+        child_id: child.id,
         consent_type: "ai_features" as const,
         granted: consent_ai || false,
       },
       {
         household_id: household.id,
-        parent_id: effectiveUserId,
-        child_id: childId,
+        parent_id: parentAppUserId,
+        child_id: child.id,
         consent_type: "social_features" as const,
         granted: consent_social || false,
       },
@@ -197,13 +191,12 @@ export async function completeParentOnboarding(formData: {
       console.log("[onboarding:completeParentOnboarding] ✓ Consents recorded")
     }
 
-    // 5. Assign starter quest
-    console.log("[onboarding:completeParentOnboarding] Step 5: Assigning starter quest:", starter_quest.title)
+    console.log("[onboarding:completeParentOnboarding] Step 4: Assigning starter quest:", starter_quest.title)
     try {
       await assignStarterQuest({
         household_id: household.id,
-        assigned_to: childId,
-        assigned_by: effectiveUserId,
+        assigned_to: child.id, // Internal UUID
+        assigned_by: parentAppUserId, // Internal UUID
         title: starter_quest.title,
         category: starter_quest.category,
         points: starter_quest.points,
@@ -216,10 +209,10 @@ export async function completeParentOnboarding(formData: {
       )
     }
 
-    // 6. Generate friend invite code
-    console.log("[onboarding:completeParentOnboarding] Step 6: Generating invite code")
+    // Step 5: Generate friend invite code
+    console.log("[onboarding:completeParentOnboarding] Step 5: Generating invite code")
     try {
-      const inviteCode = await generateInviteCode({ child_id: childId })
+      const inviteCode = await generateInviteCode({ child_id: child.id }) // Internal UUID
       if (inviteCode) {
         console.log("[onboarding:completeParentOnboarding] ✓ Invite code generated:", inviteCode.code)
       }
@@ -230,19 +223,19 @@ export async function completeParentOnboarding(formData: {
       )
     }
 
-    // 7. Update Clerk metadata
     if (hasClerkKeys && userId) {
-      console.log("[onboarding:completeParentOnboarding] Step 7: Updating Clerk metadata")
+      console.log("[onboarding:completeParentOnboarding] Step 6: Updating Clerk metadata")
       try {
         const client = await clerkClient()
         await client.users.updateUserMetadata(effectiveUserId, {
           publicMetadata: {
             role: "parent",
             household_id: household.id,
+            app_user_id: parentAppUserId, // Store internal UUID in Clerk
             setup_complete: true,
           },
         })
-        console.log("[onboarding:completeParentOnboarding] ✓ Clerk metadata updated")
+        console.log("[onboarding:completeParentOnboarding] ✓ Clerk metadata updated with app_user_id")
       } catch (clerkError: any) {
         console.error(
           "[onboarding:completeParentOnboarding] ✗ Failed to update Clerk metadata (non-critical):",
@@ -258,8 +251,9 @@ export async function completeParentOnboarding(formData: {
     return {
       ok: true,
       household_id: household.id,
-      child_id: childId,
-      parent_id: effectiveUserId,
+      child_id: child.clerk_user_id, // Return Clerk ID for client
+      parent_id: effectiveUserId, // Return Clerk ID for client
+      app_user_id: parentAppUserId, // Return internal UUID
     }
   } catch (error: any) {
     console.error("[onboarding:completeParentOnboarding] ========================================")

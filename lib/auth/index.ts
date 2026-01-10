@@ -5,9 +5,10 @@ export type UserRole = "parent" | "child"
 export type AgeBand = "early_child" | "mid_child" | "pre_teen" | "teen"
 
 export interface StarSproutUser {
-  clerkUserId: string
-  householdId: string
-  role: UserRole
+  clerkUserId: string // External Clerk auth identifier
+  appUserId: string | null // Internal database UUID (null until onboarding complete)
+  householdId: string | null
+  role: UserRole | null
   displayName: string
   avatarUrl?: string | null
   ageBand?: AgeBand | null
@@ -17,36 +18,48 @@ export interface StarSproutUser {
 
 /**
  * Get the current authenticated user with StarSprout metadata from Clerk
- * Returns null if not authenticated or setup incomplete
+ * Returns null if not authenticated
  */
 export async function getCurrentUser(): Promise<StarSproutUser | null> {
+  console.log("[v0] [auth] Getting current user...")
   const { userId } = await auth()
-  if (!userId) return null
+  if (!userId) {
+    console.log("[v0] [auth] No userId from Clerk auth()")
+    return null
+  }
 
   const user = await currentUser()
-  if (!user) return null
+  if (!user) {
+    console.log("[v0] [auth] No user from Clerk currentUser()")
+    return null
+  }
 
   const metadata = user.publicMetadata as {
     role?: UserRole
     household_id?: string
+    app_user_id?: string // Added internal UUID
     age_band?: AgeBand
     setup_complete?: boolean
   }
 
-  // Return null if required metadata is missing
-  if (!metadata.role || !metadata.household_id || !metadata.setup_complete) {
-    return null
-  }
+  console.log("[v0] [auth] Clerk user metadata:", {
+    clerkUserId: user.id,
+    role: metadata.role,
+    householdId: metadata.household_id,
+    appUserId: metadata.app_user_id,
+    setupComplete: metadata.setup_complete,
+  })
 
   return {
     clerkUserId: user.id,
-    householdId: metadata.household_id,
-    role: metadata.role,
+    appUserId: metadata.app_user_id || null, // Internal UUID
+    householdId: metadata.household_id || null,
+    role: metadata.role || null,
     displayName: user.firstName || user.username || "User",
     avatarUrl: user.imageUrl,
     ageBand: metadata.age_band || null,
     email: user.emailAddresses[0]?.emailAddress,
-    setupComplete: metadata.setup_complete,
+    setupComplete: metadata.setup_complete || false,
   }
 }
 
@@ -57,6 +70,9 @@ export async function requireAuth(): Promise<StarSproutUser> {
   const user = await getCurrentUser()
   if (!user) {
     throw new Error("Authentication required. Please sign in and complete onboarding.")
+  }
+  if (!user.setupComplete || !user.appUserId || !user.householdId) {
+    throw new Error("Onboarding incomplete. Please complete setup.")
   }
   return user
 }

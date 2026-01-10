@@ -23,47 +23,28 @@ export interface SupabaseStructuredError {
 }
 
 // ============================================================================
-// HOUSEHOLD CREATION
+// HOUSEHOLD CREATION (IDEMPOTENT)
 // ============================================================================
 
 export async function createHousehold(
-  input: CreateHouseholdInput & { owner_clerk_user_id: string },
+  input: CreateHouseholdInput & { owner_clerk_user_id: string; owner_nickname?: string; owner_avatar_url?: string },
 ): Promise<{ data: Household | null; error: SupabaseStructuredError | null }> {
-  console.log("[onboarding:createHousehold] Called with input:", JSON.stringify(input))
+  console.log("[onboarding:createHousehold] Called with input:", {
+    name: input.name,
+    owner_clerk_user_id: input.owner_clerk_user_id,
+  })
 
   const supabase = getSupabaseAdmin()
 
   try {
-    console.log("[onboarding:createHousehold] Checking for existing household owned by:", input.owner_clerk_user_id)
+    console.log("[onboarding:createHousehold] Calling upsert_household_for_parent function")
 
-    const { data: existingHouseholds, error: fetchError } = await supabase
-      .from("starsprout_households")
-      .select("*, starsprout_users!inner(id, role)")
-      .eq("starsprout_users.id", input.owner_clerk_user_id)
-      .eq("starsprout_users.role", "parent")
-      .limit(1)
-
-    if (fetchError) {
-      console.error("[onboarding:createHousehold] Error checking existing household:", {
-        code: fetchError.code,
-        message: fetchError.message,
-        details: fetchError.details,
-        hint: fetchError.hint,
-      })
-    } else if (existingHouseholds && existingHouseholds.length > 0) {
-      console.log("[onboarding:createHousehold] ✓ Found existing household (idempotent):", existingHouseholds[0].id)
-      return { data: existingHouseholds[0] as Household, error: null }
-    }
-
-    console.log("[onboarding:createHousehold] Creating new household:", input.name)
-
-    const { data, error } = await supabase
-      .from("starsprout_households")
-      .insert({
-        name: input.name,
-      })
-      .select()
-      .single()
+    const { data, error } = await supabase.rpc("upsert_household_for_parent", {
+      p_clerk_user_id: input.owner_clerk_user_id,
+      p_household_name: input.name,
+      p_parent_nickname: input.owner_nickname || "Parent",
+      p_parent_avatar_url: input.owner_avatar_url || null,
+    })
 
     if (error) {
       console.error("[onboarding:createHousehold] ✗✗✗ HOUSEHOLD CREATION ERROR ✗✗✗")
@@ -84,8 +65,44 @@ export async function createHousehold(
       }
     }
 
-    console.log("[onboarding:createHousehold] ✓ Household created successfully:", data.id)
-    return { data, error: null }
+    if (!data || data.length === 0) {
+      console.error("[onboarding:createHousehold] ✗ Function returned no data")
+      return {
+        data: null,
+        error: {
+          message: "Household creation returned no data",
+          code: "NO_DATA",
+        },
+      }
+    }
+
+    const result = data[0]
+    console.log("[onboarding:createHousehold] ✓ Household ready:", {
+      household_id: result.household_id,
+      user_id: result.user_id,
+      is_new: result.is_new,
+    })
+
+    // Fetch the full household record to return
+    const { data: household, error: fetchError } = await supabase
+      .from("starsprout_households")
+      .select("*")
+      .eq("id", result.household_id)
+      .single()
+
+    if (fetchError || !household) {
+      console.error("[onboarding:createHousehold] ✗ Failed to fetch household record:", fetchError)
+      return {
+        data: null,
+        error: {
+          message: "Failed to fetch household after creation",
+          code: fetchError?.code,
+          details: fetchError?.details,
+        },
+      }
+    }
+
+    return { data: household, error: null }
   } catch (err: any) {
     console.error("[onboarding:createHousehold] ✗✗✗ UNEXPECTED ERROR ✗✗✗")
     console.error("[onboarding:createHousehold] Error:", err)
@@ -102,97 +119,134 @@ export async function createHousehold(
 }
 
 // ============================================================================
-// USER CREATION
+// USER CREATION (USES CLERK ID → INTERNAL UUID MAPPING)
 // ============================================================================
 
 export async function createUser(
   input: CreateUserInput,
 ): Promise<{ data: User | null; error: SupabaseStructuredError | null }> {
-  console.log(
-    "[onboarding:createUser] Called with input:",
-    JSON.stringify({ ...input, id: `${input.id.substring(0, 10)}...` }),
-  )
+  console.log("[onboarding:createUser] Called with input:", {
+    clerk_user_id: input.clerk_user_id,
+    role: input.role,
+    nickname: input.nickname,
+  })
 
   const supabase = getSupabaseAdmin()
 
   try {
-    const { data: existingUser } = await supabase.from("starsprout_users").select("*").eq("id", input.id).single()
+    console.log("[onboarding:createUser] Calling upsert_starsprout_user function")
 
-    if (existingUser) {
-      console.log("[onboarding:createUser] ✓ User already exists (idempotent):", existingUser.id)
-      return { data: existingUser, error: null }
-    }
+    const { data: userIdData, error: rpcError } = await supabase.rpc("upsert_starsprout_user", {
+      p_clerk_user_id: input.clerk_user_id,
+      p_household_id: input.household_id,
+      p_role: input.role,
+      p_nickname: input.nickname,
+      p_avatar_url: input.avatar_url || null,
+      p_age_band: input.age_band || null,
+    })
 
-    const { data, error } = await supabase
-      .from("starsprout_users")
-      .insert({
-        id: input.id,
-        household_id: input.household_id,
-        role: input.role,
-        nickname: input.nickname,
-        avatar_url: input.avatar_url || null,
-        age_band: input.age_band || null,
-      })
-      .select()
-      .single()
-
-    if (error) {
+    if (rpcError) {
       console.error("[onboarding:createUser] ✗✗✗ USER CREATION ERROR ✗✗✗")
-      console.error("[onboarding:createUser] Error code:", error.code)
-      console.error("[onboarding:createUser] Error message:", error.message)
-      console.error("[onboarding:createUser] Error details:", error.details)
-      console.error("[onboarding:createUser] Error hint:", error.hint)
+      console.error("[onboarding:createUser] Error code:", rpcError.code)
+      console.error("[onboarding:createUser] Error message:", rpcError.message)
+      console.error("[onboarding:createUser] Error details:", rpcError.details)
+      console.error("[onboarding:createUser] Error hint:", rpcError.hint)
 
       return {
         data: null,
         error: {
-          message: error.message || "Failed to create user",
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
+          message: rpcError.message || "Failed to create user",
+          code: rpcError.code,
+          details: rpcError.details,
+          hint: rpcError.hint,
         },
       }
     }
 
-    console.log("[onboarding:createUser] ✓ User created successfully:", data.id)
+    console.log("[onboarding:createUser] ✓ User function returned internal UUID:", userIdData)
 
-    // Initialize user points record
-    await supabase.from("starsprout_user_points").insert({
-      household_id: input.household_id,
-      user_id: input.id,
-      total_points: 0,
-      available_points: 0,
-      spent_points: 0,
-      weekly_points: 0,
-    })
+    // Fetch the full user record
+    const { data: user, error: fetchError } = await supabase
+      .from("starsprout_users")
+      .select("*")
+      .eq("id", userIdData)
+      .single()
 
-    // Initialize streak record if child
-    if (input.role === "child") {
-      await supabase.from("starsprout_streaks").insert({
-        household_id: input.household_id,
-        user_id: input.id,
-        current_streak: 0,
-        longest_streak: 0,
-      })
-
-      // Initialize notification preferences
-      await supabase.from("starsprout_notification_preferences").insert({
-        user_id: input.id,
-        email_enabled: false,
-        weekly_summary_email: false,
-        in_app_enabled: true,
-      })
-    } else {
-      // Parent notification preferences
-      await supabase.from("starsprout_notification_preferences").insert({
-        user_id: input.id,
-        email_enabled: true,
-        weekly_summary_email: true,
-        in_app_enabled: true,
-      })
+    if (fetchError || !user) {
+      console.error("[onboarding:createUser] ✗ Failed to fetch user record:", fetchError)
+      return {
+        data: null,
+        error: {
+          message: "Failed to fetch user after creation",
+          code: fetchError?.code,
+          details: fetchError?.details,
+        },
+      }
     }
 
-    return { data, error: null }
+    console.log("[onboarding:createUser] ✓ User created successfully:", {
+      internal_id: user.id,
+      clerk_id: user.clerk_user_id,
+      role: user.role,
+    })
+
+    // Initialize user points record (using internal UUID)
+    const { error: pointsError } = await supabase.from("starsprout_user_points").upsert(
+      {
+        household_id: input.household_id,
+        user_id: user.id, // Internal UUID
+        total_points: 0,
+        available_points: 0,
+        spent_points: 0,
+        weekly_points: 0,
+      },
+      { onConflict: "user_id" },
+    )
+
+    if (pointsError) {
+      console.error("[onboarding:createUser] Warning: Failed to initialize user points (non-critical):", pointsError)
+    }
+
+    // Initialize streak record if child (using internal UUID)
+    if (input.role === "child") {
+      const { error: streakError } = await supabase.from("starsprout_streaks").upsert(
+        {
+          household_id: input.household_id,
+          user_id: user.id, // Internal UUID
+          current_streak: 0,
+          longest_streak: 0,
+        },
+        { onConflict: "user_id" },
+      )
+
+      if (streakError) {
+        console.error("[onboarding:createUser] Warning: Failed to initialize streak (non-critical):", streakError)
+      }
+
+      // Initialize notification preferences
+      await supabase.from("starsprout_notification_preferences").upsert(
+        {
+          user_id: user.id, // Internal UUID
+          email_enabled: false,
+          weekly_summary_email: false,
+          in_app_enabled: true,
+        },
+        { onConflict: "user_id" },
+      )
+    } else {
+      // Parent notification preferences
+      await supabase.from("starsprout_notification_preferences").upsert(
+        {
+          user_id: user.id, // Internal UUID
+          email_enabled: true,
+          weekly_summary_email: true,
+          in_app_enabled: true,
+        },
+        { onConflict: "user_id" },
+      )
+    }
+
+    return { data: user, error: null }
   } catch (err: any) {
     console.error("[onboarding:createUser] ✗✗✗ UNEXPECTED ERROR ✗✗✗")
     console.error("[onboarding:createUser] Error:", err)

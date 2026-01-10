@@ -77,13 +77,16 @@ export interface FeatureFlagNew {
 export interface Household {
   id: string
   name: string
+  owner_user_id: string | null // Internal user UUID FK
+  owner_clerk_user_id: string | null // Denormalized Clerk ID for queries
   status: HouseholdStatus
   created_at: string
   updated_at: string
 }
 
 export interface User {
-  id: string
+  id: string // Internal UUID (not Clerk ID)
+  clerk_user_id: string // External Clerk auth ID
   household_id: string
   role: Role
   nickname: string
@@ -327,7 +330,7 @@ export interface CreateHouseholdInput {
 }
 
 export interface CreateUserInput {
-  id: string // Clerk user ID
+  clerk_user_id: string // Clerk user ID (text)
   household_id: string
   role: Role
   nickname: string

@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Stepper } from "@/components/onboarding/stepper"
 import { AvatarPicker } from "@/components/onboarding/avatar-picker"
-import { Sparkles } from "lucide-react"
+import { Sparkles, AlertCircle } from "lucide-react"
 import { haptics } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
 import { completeParentOnboarding } from "@/app/actions/onboarding"
@@ -29,7 +29,7 @@ export default function ParentOnboardingPage() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; code?: string } | null>(null)
   const router = useRouter()
   const { user, isLoaded } = useUser()
 
@@ -69,23 +69,23 @@ export default function ParentOnboardingPage() {
 
     // Validation for each step
     if (step === 1 && !householdName.trim()) {
-      setError("Please enter a household name")
+      setError({ message: "Please enter a household name", code: "VALIDATION_ERROR" })
       return
     }
 
     if (step === 2) {
       if (!childNickname.trim()) {
-        setError("Please enter a nickname for your child")
+        setError({ message: "Please enter a nickname for your child", code: "VALIDATION_ERROR" })
         return
       }
       if (!childAgeBand) {
-        setError("Please select an age band")
+        setError({ message: "Please select an age band", code: "VALIDATION_ERROR" })
         return
       }
     }
 
     if (step === 3 && !consentCoppa) {
-      setError("Parent consent is required to continue")
+      setError({ message: "Parent consent is required to continue", code: "VALIDATION_ERROR" })
       return
     }
 
@@ -126,17 +126,18 @@ export default function ParentOnboardingPage() {
       console.log("[v0] Server action result:", result)
 
       if (!result.ok) {
-        const errorMsg = result.error?.message || "Failed to complete onboarding"
-        const errorCode = result.error?.code ? ` (${result.error.code})` : ""
-        const displayError = `${errorMsg}${errorCode}`
-
         console.error("[v0] Onboarding failed:", {
           message: result.error?.message,
           code: result.error?.code,
           details: result.error?.details,
         })
 
-        throw new Error(displayError)
+        setError({
+          message: result.error?.message || "Failed to complete onboarding",
+          code: result.error?.code,
+        })
+        setSubmitting(false)
+        return
       }
 
       haptics.celebration()
@@ -145,11 +146,14 @@ export default function ParentOnboardingPage() {
         router.push("/parent/dashboard")
       } else {
         console.log("[v0] Preview mode - onboarding complete!")
-        setError("Onboarding complete! (Preview mode - would redirect to dashboard)")
+        setError({ message: "Onboarding complete! (Preview mode - would redirect to dashboard)" })
       }
     } catch (err: any) {
       console.error("[v0] Onboarding error:", err)
-      setError(err.message || "Failed to complete onboarding. Please try again.")
+      setError({
+        message: err.message || "Failed to complete onboarding. Please try again.",
+        code: "UNEXPECTED_ERROR",
+      })
       setSubmitting(false)
     }
   }
@@ -205,7 +209,15 @@ export default function ParentOnboardingPage() {
                           autoFocus
                         />
                       </div>
-                      {error && <p className="text-sm text-red-500">{error}</p>}
+                      {error && (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-900">{error.message}</p>
+                            {error.code && <p className="text-xs text-red-700 mt-0.5">Error code: {error.code}</p>}
+                          </div>
+                        </div>
+                      )}
                       <Button onClick={handleNext} className="w-full">
                         Next
                       </Button>
@@ -250,7 +262,15 @@ export default function ParentOnboardingPage() {
                         </Select>
                       </div>
 
-                      {error && <p className="text-sm text-red-500">{error}</p>}
+                      {error && (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-900">{error.message}</p>
+                            {error.code && <p className="text-xs text-red-700 mt-0.5">Error code: {error.code}</p>}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
@@ -339,7 +359,15 @@ export default function ParentOnboardingPage() {
                         </p>
                       </div>
 
-                      {error && <p className="text-sm text-red-500">{error}</p>}
+                      {error && (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-900">{error.message}</p>
+                            {error.code && <p className="text-xs text-red-700 mt-0.5">Error code: {error.code}</p>}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
@@ -382,7 +410,18 @@ export default function ParentOnboardingPage() {
                         ))}
                       </div>
 
-                      {error && <p className="text-sm text-red-500">{error}</p>}
+                      {error && (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-900">{error.message}</p>
+                            {error.code && <p className="text-xs text-red-700 mt-0.5">Error code: {error.code}</p>}
+                            <p className="text-xs text-red-700 mt-1">
+                              You can try again or contact support if this persists.
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex gap-2">
                         <Button
